@@ -1,85 +1,80 @@
-import React, { useState } from "react";
-import StatsCards from "../components/StatsCards";
-import ActivityFeed from "../components/ActivityFeed";
-import MaintenanceSummary from "../components/MaintenanceSummary";
-import VisitorLogs from "../components/VisitorLogs";
-import ComplaintTracker from "../components/ComplaintTracker";
-import Notices from "../components/Notices";
-import ExpenseCharts from "../components/ExpenseCharts";
+import React from "react";
+import { Clock, Bell, Users, Wrench } from "lucide-react";
 
-const Dashboard = () => {
-  // Centralized state for all dynamic data
-  const [stats, setStats] = useState([
-    { title: "Total Residents", value: "120" },
-    { title: "Visitors Today", value: "45" },
-    { title: "Complaints Pending", value: "2" }, // Consistent data
-    { title: "Maintenance Due", value: "₹50,000" },
-  ]);
-
-  const [activities, setActivities] = useState([
-    {
-      id: 1,
-      title: "Visitor Entry",
-      description: "Mr. Sharma entered at Gate 2",
-      time: "2 mins ago",
-      icon: "Users",
-      bgColor: "bg-green-100",
-      color: "text-green-600",
-    },
-    {
-      id: 2,
-      title: "Complaint Registered",
-      description: "Water leakage in B-302",
-      time: "10 mins ago",
-      icon: "Bell",
-      bgColor: "bg-red-100",
-      color: "text-red-600",
-    },
-    {
-      id: 3,
-      title: "Maintenance Update",
-      description: "Lift maintenance completed in Tower A",
-      time: "1 hr ago",
-      icon: "Wrench",
-      bgColor: "bg-blue-100",
-      color: "text-blue-600",
-    },
-  ]);
-
-  const [maintenanceSummary, setMaintenanceSummary] = useState({
-    collected: "₹4,50,000",
-    pending: "₹50,000", // Consistent data
-  });
-
-  const [visitors, setVisitors] = useState([
-    { name: "Mr. Sharma", purpose: "Delivery", time: "10:00 AM" },
-    { name: "Mrs. Gupta", purpose: "Relative Visit", time: "11:15 AM" },
-    { name: "Electrician", purpose: "Repair Work", time: "12:30 PM" },
-  ]);
-
-  const [complaints, setComplaints] = useState([
-    { flat: "B-302", issue: "Water leakage", status: "Pending" },
-    { flat: "C-104", issue: "Lift not working", status: "Resolved" },
-  ]);
-
-  const [notices, setNotices] = useState([
-    { date: "20 Sept 2025", msg: "Society meeting at 6 PM in clubhouse" },
-    { date: "18 Sept 2025", msg: "Water supply maintenance on 21 Sept" },
-  ]);
+const Dashboard = ({ activities, complaints }) => {
+  const icons = { Bell, Users, Wrench }; // Map icon names to components
 
   return (
-    <div className="space-y-6">
-      <StatsCards stats={stats} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActivityFeed activities={activities} />
-        <MaintenanceSummary summary={maintenanceSummary} />
-      </div>
-      <ExpenseCharts/>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <VisitorLogs visitors={visitors} />
-        <ComplaintTracker complaints={complaints} />
-      </div>
-      <Notices notices={notices} />
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-900">
+      {/* Navbar */}
+      <header className="flex items-center justify-between bg-white dark:bg-slate-800 shadow p-4">
+        <h1 className="text-lg font-bold">Society Dashboard</h1>
+        <button className="bg-blue-600 text-white px-4 py-1 rounded-lg">
+          Logout
+        </button>
+      </header>
+
+      {/* Main Content */}
+      <main className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Activity Feed */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
+          <h3 className="text-lg font-bold mb-4">Activity Feed</h3>
+          <div className="space-y-3">
+            {activities.map((activity) => {
+              const IconComponent = icons[activity.icon];
+              return (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-lg ${activity.bgColor}`}>
+                    <IconComponent className={`w-4 h-4 ${activity.color}`} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold">{activity.title}</h4>
+                    <p className="text-xs text-slate-500">
+                      {activity.description}
+                    </p>
+                    <div className="flex items-center text-xs text-slate-400 mt-1">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {activity.time}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Complaint Tracker */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow">
+          <h3 className="text-lg font-bold mb-4">Complaint Tracker</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-500">
+                <th>Flat</th>
+                <th>Issue</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {complaints.map((c, i) => (
+                <tr
+                  key={i}
+                  className="border-t border-slate-200 dark:border-slate-700"
+                >
+                  <td>{c.flat}</td>
+                  <td>{c.issue}</td>
+                  <td
+                    className={
+                      c.status === "Pending" ? "text-red-500" : "text-green-500"
+                    }
+                  >
+                    {c.status}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </main>
     </div>
   );
 };

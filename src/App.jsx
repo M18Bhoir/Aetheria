@@ -5,11 +5,8 @@ import Login from './LoginSignUp/Login';
 import UserLogin from './LoginSignUp/UserLogin';
 import AdminLogin from './LoginSignUp/AdminLogin';
 import Signup from './LoginSignUp/SignUp';
-import AdminDashboard from './DashBoard/AdminDashboard/DashAdmin';
-import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import './App.css'; 
+import Dashboard from './Assets/pages/Dashboard';
+import './App.css';
 
 function App() {
   return (
@@ -21,17 +18,7 @@ function App() {
           <Route path="/login/user" element={<UserLogin />} />
           <Route path="/login/admin" element={<AdminLogin />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/admin" element={
-            <>
-              <Sidebar />
-              <div className="flex-1 flex flex-col">
-                <Navbar />
-                <main className="p-6 flex-1 overflow-y-auto">
-                  <Dashboard />
-                </main>
-              </div>
-            </>
-          } />
+          <Route path="/admin" element={<Dashboard />} />
         </Routes>
       </div>
     </Router>
