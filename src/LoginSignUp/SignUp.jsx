@@ -42,7 +42,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f0f1e]">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f0f1e] w-full"> {/* Added w-full */}
       <h2 className="text-white mb-6 text-2xl font-bold">Create Account</h2>
 
       <div className="flex flex-col w-[400px] pb-[30px] bg-[#1a1a2e] rounded-[15px] shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-[#2e2e42]">

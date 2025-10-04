@@ -1,11 +1,11 @@
+// LandingPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion"; 
 import building_icon from "/src/Assets/building.png";
 import frontendImage from "/src/Assets/frontend1.png";
 
-
-
+// --- Animations ---
 const fadeIn = (delay = 0) => ({
   hidden: { opacity: 0, y: 40 },
   show: {
@@ -15,7 +15,7 @@ const fadeIn = (delay = 0) => ({
   },
 });
 
-
+// --- Reusable Card Components ---
 const Card = ({ title, description }) => (
   <motion.div
     variants={fadeIn(0.2)}
@@ -28,7 +28,6 @@ const Card = ({ title, description }) => (
     <p className="text-gray-600 dark:text-gray-300">{description}</p>
   </motion.div>
 );
-
 
 const NumberedCard = ({ number, title, description }) => (
   <motion.div
@@ -47,58 +46,45 @@ const NumberedCard = ({ number, title, description }) => (
   </motion.div>
 );
 
-const LandingPage = () => {
+// --- Header ---
+const Header = ({ isDarkMode, toggleTheme }) => {
   const navigate = useNavigate();
 
-  
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem("theme") === "dark";
-  });
-
-  
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode((prev) => !prev);
-
   return (
-    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen w-full dark:bg-gray-900 dark:text-gray-300">
+    <header className="flex justify-between items-center py-4 px-8 bg-white shadow-md fixed top-0 w-full z-50 dark:bg-gray-800 dark:text-white">
+      <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        Aetheria
+      </h1>
+      <nav className="flex items-center space-x-4">
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 dark:text-gray-300 dark:hover:bg-gray-700"
+        >
+          {isDarkMode ? "🌞" : "🌙"}
+        </button>
+        <button
+          className="py-2 px-4 rounded-full text-blue-600 hover:bg-blue-50 transition duration-300 dark:text-blue-400 dark:hover:bg-blue-900"
+          onClick={() => navigate("/login")}
+        >
+          Login
+        </button>
+        <button
+          className="py-2 px-4 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition duration-300 dark:bg-blue-400 dark:hover:bg-blue-500"
+          onClick={() => navigate("/signup")}
+        >
+          Sign Up
+        </button>
+      </nav>
+    </header>
+  );
+};
 
-      <header className="flex justify-between items-center py-4 px-8 bg-white shadow-md fixed top-0 w-full z-50 dark:bg-gray-800 dark:text-white">
-        <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          Aetheria
-        </h1>
-        <nav className="flex items-center space-x-4">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            {isDarkMode ? "🌞" : "🌙"}
-          </button>
-          <button
-            className="py-2 px-4 rounded-full text-blue-600 hover:bg-blue-50 transition duration-300 dark:text-blue-400 dark:hover:bg-blue-900"
-            onClick={() => navigate("/login")}
-          >
-            Login
-          </button>
-          <button
-            className="py-2 px-4 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition duration-300 dark:bg-blue-400 dark:hover:bg-blue-500"
-            onClick={() => navigate("/signup")}
-          >
-            Sign Up
-          </button>
-        </nav>
-      </header>
-
-
-      <section className="flex flex-col justify-center items-center text-center pt-28 pb-20 px-8 w-full">
+// --- Main Content ---
+const Main = () => {
+  return (
+    <main className="pt-28">
+      {/* Hero Section */}
+      <section className="flex flex-col justify-center items-center text-center pb-20 px-8 w-full">
         <motion.p
           variants={fadeIn(0.1)}
           initial="hidden"
@@ -127,7 +113,7 @@ const LandingPage = () => {
         </motion.p>
       </section>
 
-      
+      {/* Challenge Section */}
       <section className="bg-gray-100 py-20 px-8 dark:bg-gray-800 w-full">
         <div className="w-full text-center">
           <motion.h2
@@ -165,7 +151,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      
+      {/* Solution Section */}
       <section className="py-20 px-8 w-full text-center">
         <motion.h5
           variants={fadeIn(0.1)}
@@ -215,9 +201,42 @@ const LandingPage = () => {
           </p>
         </div>
       </section>
+    </main>
+  );
+};
+
+// --- Footer ---
+const Footer = () => (
+  <footer className="bg-gray-200 py-6 px-8 text-center dark:bg-gray-800 dark:text-gray-400">
+    <p>© {new Date().getFullYear()} Aetheria. All rights reserved.</p>
+  </footer>
+);
+
+// --- Landing Page (Wrapper) ---
+const LandingPage = () => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
+  return (
+    <div className="font-sans text-gray-800 bg-gray-50 min-h-screen w-full dark:bg-gray-900 dark:text-gray-300">
+      <Header isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+      <Main />
+      <Footer />
     </div>
   );
 };
 
 export default LandingPage;
-

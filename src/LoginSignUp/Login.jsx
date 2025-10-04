@@ -1,10 +1,12 @@
+// Login.jsx
+
 import { useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-[#0f0f1e]">
+    <div className="flex flex-col items-center justify-center h-screen bg-[#0f0f1e] w-full"> {/* Add w-full */}
       <h1 className="text-4xl text-white mb-10 font-bold">Choose Login</h1>
       <div className="flex gap-6">
         {/* User Login button */}
