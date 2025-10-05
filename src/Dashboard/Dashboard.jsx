@@ -1,5 +1,14 @@
-import React from "react";
-import { Clock, Bell, Users, Wrench } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Clock,
+  Bell,
+  Users,
+  Wrench,
+  ClipboardList,
+  Menu,
+  X,
+  Home,
+} from "lucide-react";
 
 // ----------------- StatsCards -----------------
 const StatsCards = ({ stats }) => {
@@ -34,7 +43,9 @@ const ActivityFeed = ({ activities }) => {
               </div>
               <div>
                 <h4 className="text-sm font-semibold">{activity.title}</h4>
-                <p className="text-xs text-slate-500">{activity.description}</p>
+                <p className="text-xs text-slate-500">
+                  {activity.description}
+                </p>
                 <div className="flex items-center text-xs text-slate-400 mt-1">
                   <Clock className="w-3 h-3 mr-1" />
                   {activity.time}
@@ -90,10 +101,17 @@ const ComplaintTracker = ({ complaints }) => {
         </thead>
         <tbody>
           {complaints.map((c, i) => (
-            <tr key={i} className="border-t border-slate-200 dark:border-slate-700">
+            <tr
+              key={i}
+              className="border-t border-slate-200 dark:border-slate-700"
+            >
               <td>{c.flat}</td>
               <td>{c.issue}</td>
-              <td className={c.status === "Pending" ? "text-red-500" : "text-green-500"}>
+              <td
+                className={
+                  c.status === "Pending" ? "text-red-500" : "text-green-500"
+                }
+              >
                 {c.status}
               </td>
             </tr>
@@ -120,6 +138,49 @@ const VisitorLogs = ({ visitors }) => {
         ))}
       </ul>
     </div>
+  );
+};
+
+// ----------------- Sidebar -----------------
+export const Sidebar = () => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const menu = [
+    { name: "Dashboard", icon: <Home size={18} /> },
+    { name: "Residents", icon: <Users size={18} /> },
+    { name: "Notices", icon: <Bell size={18} /> },
+    { name: "Complaints", icon: <ClipboardList size={18} /> },
+    { name: "Maintenance", icon: <Wrench size={18} /> },
+  ];
+
+  return (
+    <aside
+      className={`${
+        isOpen ? "w-64" : "w-16"
+      } bg-white dark:bg-slate-800 shadow-lg transition-all duration-300 h-screen flex flex-col`}
+    >
+      <div className="flex items-center justify-between p-4">
+        {isOpen && <div className="text-xl font-bold">🏢 Society</div>}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      <nav className="space-y-2 px-2 flex-1">
+        {menu.map((item) => (
+          <button
+            key={item.name}
+            className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+          >
+            {item.icon}
+            {isOpen && <span>{item.name}</span>}
+          </button>
+        ))}
+      </nav>
+    </aside>
   );
 };
 
@@ -162,10 +223,7 @@ const Dashboard = () => {
     },
   ];
 
-  const summary = {
-    collected: "₹50,000",
-    pending: "₹10,000",
-  };
+  const summary = { collected: "₹50,000", pending: "₹10,000" };
 
   const notices = [
     { date: "Oct 25", msg: "Annual General Body Meeting on Nov 10." },
@@ -185,17 +243,20 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <StatsCards stats={stats} />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <ActivityFeed activities={activities} />
-        <MaintenanceSummary summary={summary} />
-        <Notices notices={notices} />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ComplaintTracker complaints={complaints} />
-        <VisitorLogs visitors={visitors} />
-      </div>
+    <div className="flex">
+      <Sidebar />
+      <main className="flex-1 space-y-6 p-6">
+        <StatsCards stats={stats} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <ActivityFeed activities={activities} />
+          <MaintenanceSummary summary={summary} />
+          <Notices notices={notices} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ComplaintTracker complaints={complaints} />
+          <VisitorLogs visitors={visitors} />
+        </div>
+      </main>
     </div>
   );
 };
