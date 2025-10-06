@@ -4,6 +4,7 @@ import LandingPage from './LandingPage/LandingPage';
 import Login from './LoginSignUp/Login';
 import Signup from './LoginSignUp/SignUp';
 import Dashboard from './Dashboard/Dashboard';
+import User_Dashboard from './UserDashBoard/User_Dashboard';
 import './index.css';
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin-dashboard" element={<Dashboard />} />
           <Route path="/login/admin/Dashboard" element={<Dashboard />} />
+          <Route path="/User_Dashboard" element={<User_Dashboard />} />
+          <Route path="/login/user/Dashboard" element={<User_Dashboard/>} />
         </Routes>
       </div>
     </Router>
