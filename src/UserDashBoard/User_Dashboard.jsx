@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Clock,
   Bell,
@@ -166,24 +167,25 @@ export const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
 
   const menu = [
-    { name: "Dashboard", icon: <Home size={18} /> },
-    { name: "My Profile", icon: <User size={18} /> },
-    { name: "Notices", icon: <Bell size={18} /> },
-    { name: "Maintenance", icon: <CreditCard size={18} /> },
-    { name: "Complaints", icon: <ClipboardList size={18} /> },
+    { name: "Dashboard", icon: <Home size={18} />, path: "/User_Dashboard" },
+    { name: "My Profile", icon: <User size={18} />, path: "/profile" },
+    { name: "Notices", icon: <Bell size={18} />, path: "/notices" },
+    { name: "Maintenance", icon: <CreditCard size={18} />, path: "/maintenance" },
+    { name: "Complaints", icon: <ClipboardList size={18} />, path: "/complaints" },
+    { name: "Voting", icon: <FileText size={18} />, path: "/voting" },
   ];
 
   return (
     <aside
       className={`${
         isOpen ? "w-64" : "w-16"
-      } bg-white dark:bg-slate-800 shadow-lg transition-all duration-300 h-screen flex flex-col`}
+      } bg-[#1a1a2e] text-white shadow-lg transition-all duration-300 h-screen flex flex-col`}
     >
       <div className="flex items-center justify-between p-4">
         {isOpen && <div className="text-xl font-bold">🏢 My Society</div>}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+          className="p-1 rounded hover:bg-gray-700"
         >
           {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -191,13 +193,14 @@ export const Sidebar = () => {
 
       <nav className="space-y-2 px-2 flex-1">
         {menu.map((item) => (
-          <button
+          <Link
             key={item.name}
-            className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+            to={item.path}
+            className="flex items-center space-x-2 w-full p-2 rounded-lg hover:bg-blue-500 hover:text-white transition-colors duration-200"
           >
             {item.icon}
             {isOpen && <span>{item.name}</span>}
-          </button>
+          </Link>
         ))}
       </nav>
     </aside>
@@ -234,7 +237,7 @@ const User_Dashboard = () => {
   const maintenanceBills = [
     {
       month: "October 2025",
-      amount: "₹2,500",
+      amount: "₹10,000",
       dueDate: "Nov 5, 2025",
       status: "Pending",
     },

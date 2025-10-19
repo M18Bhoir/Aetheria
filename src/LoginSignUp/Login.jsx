@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from "react";
 
-// Mock useNavigate hook for redirection demonstration
-const useNavigate = () => (path) => {
-  console.log(`[NAVIGATE MOCK] Successful login! Attempting to redirect to: ${path}`);
-};
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 // Lucide Icon for Person/User
 const PersonIcon = (props) => (
@@ -27,10 +24,10 @@ const App = () => {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // State to toggle between User (true) and Admin (false)
-  const [isUserLogin, setIsUserLogin] = useState(true); 
-  
+  const [isUserLogin, setIsUserLogin] = useState(true);
+
   const navigate = useNavigate();
 
   // Clear inputs and messages when the role is toggled
@@ -47,38 +44,38 @@ const App = () => {
 
     const roleName = isUserLogin ? "user" : "admin";
     const apiUrl = `http://localhost:5000/api/${roleName}/login`;
-    const successPath = isUserLogin ? "/user-dashboard" : "/admin-dashboard";
+    const successPath = isUserLogin ? "/User_Dashboard" : "/admin-dashboard";
 
     try {
       console.log(`Attempting to log in as ${roleName} to: ${apiUrl}`);
-      
+
       // --- START REAL API CALL ---
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           // Use 'adminId' for admin, and assuming 'userId' for user
-          [isUserLogin ? 'userId' : 'adminId']: userId, 
-          password: password 
+          [isUserLogin ? 'userId' : 'adminId']: userId,
+          password: password
         }),
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         // Successful login (Backend should return a token/session key)
         const token = data.token; // Expecting the backend to return a token object
-        
+
         setMessage({
           type: "success",
           text: `Login successful! Redirecting to ${roleName} dashboard.`
         });
-        
+
         // Save the token to local storage for persistent authentication
         localStorage.setItem(`${roleName}Token`, token);
-        
+
         // Navigate after a short delay to show the success message
         setTimeout(() => navigate(successPath), 1500);
 
@@ -121,21 +118,21 @@ const App = () => {
       <h2 className="text-white mb-8 text-3xl font-extrabold tracking-wide">
         Secure Login Portal
       </h2>
-      
+
       <div className="flex flex-col w-full max-w-sm pb-8 bg-[#1a1a2e] rounded-xl shadow-2xl border border-[#2e2e42] transition-all duration-500 hover:shadow-[0_15px_40px_rgba(0,0,0,0.6)]">
-        
+
         {/* Role Toggle Switch */}
         <div className="w-full flex justify-center mt-5">
           <div className="relative inline-flex items-center rounded-full p-1 cursor-pointer bg-[#2e2e42] transition-all duration-300">
             {/* Sliding Highlight */}
             <div
               className={`absolute top-1 left-1 w-1/2 h-8 rounded-full shadow-md transition-transform duration-300 ease-in-out`}
-              style={{ 
+              style={{
                 transform: isUserLogin ? 'translateX(0)' : 'translateX(100%)',
                 backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`
               }}
             ></div>
-            
+
             <button
               onClick={() => setIsUserLogin(true)}
               className={`relative px-6 py-2 rounded-full font-bold text-sm transition-colors duration-300 z-10 ${
@@ -160,9 +157,9 @@ const App = () => {
           <div className="text-3xl font-bold uppercase" style={{ color: primaryColor }}>
             {isUserLogin ? 'User' : 'Admin'} Login
           </div>
-          <div 
-            className="w-12 h-1 rounded-full" 
-            style={{ backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }} 
+          <div
+            className="w-12 h-1 rounded-full"
+            style={{ backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }}
           />
         </div>
 
@@ -217,7 +214,7 @@ const App = () => {
               className={`flex justify-center items-center w-full h-[55px] text-white rounded-xl text-lg font-bold cursor-pointer border-none transition-all duration-300 ease-in-out ${
                 loading ? "opacity-60 cursor-not-allowed" : "hover:-translate-y-0.5"
               }`}
-              style={{ 
+              style={{
                 backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`,
                 boxShadow: loading ? 'none' : `0 0 20px rgba(${isUserLogin ? '255,99,71' : '77,148,255'}, 0.4)`
               }}

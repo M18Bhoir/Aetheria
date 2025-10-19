@@ -2,7 +2,18 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = "http://localhost:5000";
+
+// --- Axios interceptor to add JWT token to requests ---
+const api = axios.create({ baseURL: API_URL });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 
 // ---------------------- NavBar ----------------------
 function NavBar() {
@@ -59,7 +70,8 @@ function PollList() {
 
   useEffect(() => {
     const fetchPolls = async () => {
-      const res = await axios.get(`${API_URL}/polls`);
+      // Using the api instance which has the base URL
+      const res = await api.get(`/polls`);
       setPolls(res.data);
     };
     fetchPolls();
@@ -71,8 +83,8 @@ function PollList() {
       {polls.length === 0 && <p className="text-gray-400">No polls yet</p>}
       <ul className="space-y-2">
         {polls.map((p) => (
-          <li key={p._id} className="bg-gray-700 p-3 rounded-md hover:bg-gray-600 transition-colors duration-200">
-            <Link to={`/poll/${p._id}`} className="text-blue-400 hover:underline">
+          <li key={p.id} className="bg-gray-700 p-3 rounded-md hover:bg-gray-600 transition-colors duration-200">
+            <Link to={`/poll/${p.id}`} className="text-blue-400 hover:underline">
               {p.question}
             </Link>
             <span className="text-gray-400 text-sm ml-2">— by {p.createdBy?.name || "Unknown"}</span>
@@ -90,7 +102,7 @@ function PollDetail() {
   const [selected, setSelected] = useState(null);
 
   const fetchPoll = async () => {
-    const res = await axios.get(`${API_URL}/polls/${id}`);
+    const res = await api.get(`/polls/${id}`);
     setPoll(res.data);
   };
 
@@ -101,7 +113,7 @@ function PollDetail() {
   const vote = async () => {
     if (selected === null) return alert("Select option");
     try {
-      await axios.post(`${API_URL}/polls/${id}/vote`, { optionIndex: selected });
+      await api.post(`/polls/${id}/vote`, { optionIndex: selected });
       await fetchPoll();
       alert("Voted!");
     } catch (err) {
@@ -176,10 +188,10 @@ function CreatePoll() {
     const options = optionsText.split("\n").map((s) => s.trim()).filter(Boolean);
     if (options.length < 2) return alert("Provide at least 2 options");
     try {
-      await axios.post(`${API_URL}/polls`, { question, options });
+      await api.post(`/polls`, { question, options });
       navigate("/");
     } catch (err) {
-      alert(err.response?.data?.msg || "Error creating poll");
+      alert(err.response?.data?.msg || "Error creating poll. Are you logged in?");
     }
   };
 
@@ -212,14 +224,14 @@ function CreatePoll() {
 
 // ---------------------- Login ----------------------
 function Login() {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ userId: "", password: "" }); // Changed email to userId
   const navigate = useNavigate();
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const onSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, form);
+      const res = await api.post(`/auth/login`, form);
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       navigate("/");
@@ -232,9 +244,9 @@ function Login() {
     <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-sm mx-auto">
       <h2 className="text-2xl font-bold mb-4 text-white text-center">Login</h2>
       <input
-        name="email"
-        placeholder="Email"
-        value={form.email}
+        name="userId" // Changed from email
+        placeholder="User ID"
+        value={form.userId}
         onChange={onChange}
         required
         className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
@@ -260,59 +272,60 @@ function Login() {
 
 // ---------------------- Signup ----------------------
 function Signup() {
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const navigate = useNavigate();
+    const [form, setForm] = useState({ name: "", userId: "", password: "" }); // Changed email to userId
+    const navigate = useNavigate();
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post(`${API_URL}/auth/register`, form);
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      navigate("/");
-    } catch (err) {
-      alert(err.response?.data?.msg || "Error");
-    }
-  };
+    const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const onSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await api.post(`/auth/register`, form);
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+            navigate("/");
+        } catch (err) {
+            alert(err.response?.data?.msg || "Error");
+        }
+    };
 
-  return (
-    <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-sm mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-white text-center">Signup</h2>
-      <input
-        name="name"
-        placeholder="Name"
-        value={form.name}
-        onChange={onChange}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <input
-        name="email"
-        placeholder="Email"
-        value={form.email}
-        onChange={onChange}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <input
-        name="password"
-        placeholder="Password"
-        type="password"
-        value={form.password}
-        onChange={onChange}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-      >
-        Signup
-      </button>
-    </form>
-  );
+    return (
+        <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-sm mx-auto">
+            <h2 className="text-2xl font-bold mb-4 text-white text-center">Signup</h2>
+            <input
+                name="name"
+                placeholder="Name"
+                value={form.name}
+                onChange={onChange}
+                required
+                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
+            />
+            <input
+                name="userId" // Changed from email
+                placeholder="User ID"
+                value={form.userId}
+                onChange={onChange}
+                required
+                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
+            />
+            <input
+                name="password"
+                placeholder="Password"
+                type="password"
+                value={form.password}
+                onChange={onChange}
+                required
+                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
+            />
+            <button
+                type="submit"
+                className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+                Signup
+            </button>
+        </form>
+    );
 }
+
 
 // ---------------------- Main App ----------------------
 export default function App() {
@@ -331,3 +344,4 @@ export default function App() {
     </Router>
   );
 }
+
