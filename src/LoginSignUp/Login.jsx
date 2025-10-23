@@ -1,6 +1,7 @@
-
+// src/LoginSignUp/Login.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import api from "../api"; // Import the shared api instance
 
 // Lucide Icon for Person/User
 const PersonIcon = (props) => (
@@ -18,9 +19,9 @@ const LockIcon = (props) => (
   </svg>
 );
 
-const App = () => {
+const Login = () => { // Changed component name to start with uppercase
   // State for form inputs and UI feedback
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(""); // Stores either userId or adminId
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -43,58 +44,68 @@ const App = () => {
     setLoading(true);
 
     const roleName = isUserLogin ? "user" : "admin";
-    const apiUrl = `http://localhost:5000/api/${roleName}/login`;
+    const apiUrlPath = isUserLogin ? "/api/auth/login" : "/api/admin/login"; // Use correct backend paths
     const successPath = isUserLogin ? "/User_Dashboard" : "/admin-dashboard";
+    const idField = isUserLogin ? 'userId' : 'adminId'; // Dynamic field name for payload
 
     try {
-      console.log(`Attempting to log in as ${roleName} to: ${apiUrl}`);
+      console.log(`Attempting to log in as ${roleName} to: ${apiUrlPath}`);
 
-      // --- START REAL API CALL ---
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // Use 'adminId' for admin, and assuming 'userId' for user
-          [isUserLogin ? 'userId' : 'adminId']: userId,
+      const payload = {
+          [idField]: userId, // Use dynamic key
           password: password
-        }),
-      });
+      };
+      console.log("Sending payload:", payload);
 
-      const data = await response.json();
+      // --- Use shared API instance ---
+      const response = await api.post(apiUrlPath, payload);
+      const data = response.data; // Axios puts response data directly in .data
 
-      if (response.ok) {
-        // Successful login (Backend should return a token/session key)
-        const token = data.token; // Expecting the backend to return a token object
+      if (data.token) { // Check if token exists in response data
+        // Successful login
+        const token = data.token;
 
         setMessage({
           type: "success",
-          text: `Login successful! Redirecting to ${roleName} dashboard.`
+          text: `Login successful! Redirecting...`
         });
 
-        // Save the token to local storage for persistent authentication
-        localStorage.setItem(`${roleName}Token`, token);
+        // --- FIX: Use standardized 'token' key ---
+        localStorage.setItem('token', token);
 
-        // Navigate after a short delay to show the success message
-        setTimeout(() => navigate(successPath), 1500);
+        // Optionally store basic user/admin info if returned by backend
+        if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+        } else if (data.admin) {
+             localStorage.setItem('admin', JSON.stringify(data.admin)); // If backend sends admin info
+        }
+
+        // Navigate after a short delay
+        setTimeout(() => navigate(successPath), 1000);
 
       } else {
-        // Unsuccessful login (400, 401, 404 response codes)
-        setMessage({
-          type: "error",
-          // Use the error message returned from the backend, or a generic one
-          text: data.message || `Invalid ${roleName} ID or Password. Check your server logs.`
-        });
+         // Should not happen if backend sends token on success, but good practice
+         console.error("Login response missing token:", data);
+         setMessage({ type: "error", text: "Login failed: No token received." });
       }
-      // --- END REAL API CALL ---
 
     } catch (error) {
-      console.error("Login failed due to network or server error:", error);
-      setMessage({
-        type: "error",
-        text: "Login failed due to a network error. Ensure your backend server is running on localhost:5000."
-      });
+      console.error("Login failed:", error);
+      let errorMessage = "Login failed. Please try again.";
+      if (error.response) {
+          // Error response from server (e.g., 400, 401)
+          errorMessage = error.response.data.message || `Invalid ${roleName} ID or Password.`;
+          console.error('Server responded with error:', error.response.status, error.response.data);
+      } else if (error.request) {
+          // No response received (network error, server down)
+          errorMessage = "Network error. Could not connect to the server.";
+          console.error('Network error:', error.request);
+      } else {
+          // Other errors (e.g., setting up the request)
+          errorMessage = `An unexpected error occurred: ${error.message}`;
+          console.error('Error setting up request:', error.message);
+      }
+      setMessage({ type: "error", text: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -103,6 +114,7 @@ const App = () => {
   const primaryColor = isUserLogin ? '#ff6347' : '#4d94ff'; // User: Tomato, Admin: Bright Blue
   const secondaryColor = isUserLogin ? '#ff9478' : '#78b1ff';
 
+  // --- JSX remains largely the same, just ensure component name is Login ---
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f0f1e] w-full p-4 font-sans">
       <style jsx global>{`
@@ -180,7 +192,7 @@ const App = () => {
             </div>
           )}
 
-          {/* User ID Input */}
+          {/* User ID / Admin ID Input */}
           <div className="flex items-center w-full h-[55px] bg-[#2e2e42] rounded-xl border border-[#444466] transition-all duration-300 focus-within:border-current focus-within:shadow-[0_0_10px_rgba(255,99,71,0.4)]" style={{ borderColor: primaryColor }}>
             <PersonIcon className="mx-4 h-5 w-5" style={{ color: primaryColor }}/>
             <input
@@ -227,9 +239,21 @@ const App = () => {
             </button>
           </div>
         </form>
+
+        {/* Signup Link */}
+         <p className="text-gray-400 text-center mt-6 text-sm">
+           Don't have an account?{" "}
+           <span
+             className="cursor-pointer hover:underline"
+             style={{ color: primaryColor }}
+             onClick={() => navigate("/signup")}
+           >
+             Sign Up
+           </span>
+         </p>
       </div>
     </div>
   );
 };
 
-export default App;
+export default Login; // Export with uppercase name

@@ -1,39 +1,41 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// src/App.jsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+
+// Import Pages/Components
 import LandingPage from './LandingPage/LandingPage';
 import Login from './LoginSignUp/Login';
 import Signup from './LoginSignUp/SignUp';
-import Dashboard from './Dashboard/Dashboard';
-import User_Dashboard from './UserDashBoard/User_Dashboard';
-import VotingSystem from './Voting_System/VotingSystem';
+import AdminDashboard from './Dashboard/Dashboard';
+import UserDashboard from './UserDashBoard/User_Dashboard';
 import Profile from './Profile/Profile';
-import './index.css';
+import { PollList, PollDetail } from './Voting_System/VotingSystem';
 import CreatePoll from './Voting_System/CreatePoll';
+import './index.css';
 
 function App() {
-  useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
   return (
     <Router>
-      <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-300">
+      {/* Basic layout wrapper */}
+      <div className="flex min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white">
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/admin-dashboard" element={<Dashboard />} />
-          <Route path="/login/admin/Dashboard" element={<Dashboard />} />
-          <Route path="/User_Dashboard" element={<User_Dashboard />} />
-          <Route path="/login/user/Dashboard" element={<User_Dashboard />} />
-          <Route path="/voting" element={<VotingSystem />} />
+
+          {/* User Routes (Assumed protected elsewhere or unprotected for simplicity) */}
+          <Route path="/User_Dashboard" element={<UserDashboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/voting/CreatePoll" element={<CreatePoll/>} />
+          <Route path="/voting" element={<PollList />} />
+          <Route path="/poll/:id" element={<PollDetail />} />
+          <Route path="/voting/create" element={<CreatePoll />} />
+
+          {/* Admin Route */}
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+          {/* Basic 404 Fallback */}
+          <Route path="*" element={<div><h2>404 Not Found</h2><Link to="/">Go Home</Link></div>} />
         </Routes>
       </div>
     </Router>

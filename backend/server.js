@@ -10,9 +10,9 @@ import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 
 // Import all models from their separate files
-import User from '../../backend/models/User.js';
-import Admin from '../../backend/models/Admin.js';
-import Poll from '../../backend/models/Poll.js';
+import User from './models/User.js'; // Correct path relative to server.js
+import Admin from './models/Admin.js'; // Correct path relative to server.js
+import Poll from './models/Poll.js'; // Correct path relative to server.js
 
 // --- Environment Variable Configuration ---
 // This robustly finds the .env file whether you run from the root or /backend directory

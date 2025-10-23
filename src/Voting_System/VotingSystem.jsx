@@ -1,347 +1,228 @@
+// src/Voting_System/VotingSystem.jsx
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
+import { Link, useParams, useNavigate } from "react-router-dom";
+// --- FIX: Import the shared api instance ---
+import api from "../api"; // Adjust path as needed
 
-const API_URL = "http://localhost:5000";
-
-// --- Axios interceptor to add JWT token to requests ---
-const api = axios.create({ baseURL: API_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-
-// ---------------------- NavBar ----------------------
-function NavBar() {
-  const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
-  return (
-    <nav className="p-4 bg-gray-900 text-gray-200 shadow-md flex justify-between items-center">
-      <div>
-        <Link to="/" className="text-lg font-bold hover:text-white transition-colors duration-200">
-          PollApp
-        </Link>
-      </div>
-      <div className="space-x-4">
-        <Link to="/" className="hover:text-white transition-colors duration-200">
-          Home
-        </Link>
-        {token ? (
-          <>
-            <Link to="/create" className="hover:text-white transition-colors duration-200">
-              Create Poll
-            </Link>
-            <button
-              onClick={logout}
-              className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="hover:text-white transition-colors duration-200">
-              Login
-            </Link>
-            <Link to="/signup" className="hover:text-white transition-colors duration-200">
-              Signup
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
-  );
-}
-
-// ---------------------- Poll List ----------------------
-function PollList() {
+// ---------------------- Poll List Component ----------------------
+export function PollList() { // Export components individually
   const [polls, setPolls] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate(); // For navigation buttons
 
   useEffect(() => {
     const fetchPolls = async () => {
-      // Using the api instance which has the base URL
-      const res = await api.get(`/polls`);
-      setPolls(res.data);
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.get(`/polls`); // Use shared instance
+        setPolls(res.data);
+      } catch (err) {
+        console.error("Failed to fetch polls:", err);
+        setError("Could not load polls. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchPolls();
   }, []);
 
+  // Check if user is logged in (optional, for showing Create button)
+  const isLoggedIn = !!localStorage.getItem('token');
+
+  if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading polls...</div>;
+  if (error) return <div className="text-center p-6 text-red-500">{error}</div>;
+
   return (
-    <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-white">Polls</h2>
-      {polls.length === 0 && <p className="text-gray-400">No polls yet</p>}
-      <ul className="space-y-2">
-        {polls.map((p) => (
-          <li key={p.id} className="bg-gray-700 p-3 rounded-md hover:bg-gray-600 transition-colors duration-200">
-            <Link to={`/poll/${p.id}`} className="text-blue-400 hover:underline">
-              {p.question}
-            </Link>
-            <span className="text-gray-400 text-sm ml-2">— by {p.createdBy?.name || "Unknown"}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Available Polls</h2>
+        {isLoggedIn && (
+           <button
+             onClick={() => navigate("/voting/create")} // Navigate to create poll page
+             className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors duration-200"
+           >
+             Create New Poll
+           </button>
+        )}
+      </div>
+
+      {polls.length === 0 ? (
+        <p className="text-gray-500 dark:text-gray-400">No polls have been created yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {polls.map((p) => (
+            <li key={p._id} // Use MongoDB's _id
+                className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 flex justify-between items-center">
+              <div>
+                  <Link to={`/poll/${p._id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-lg">
+                  {p.question}
+                  </Link>
+                  <span className="block text-gray-500 dark:text-gray-400 text-sm mt-1">
+                      Created by {p.createdBy?.name || "Unknown User"} on {new Date(p.createdAt).toLocaleDateString()}
+                  </span>
+              </div>
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                {p.options.reduce((sum, opt) => sum + opt.votes, 0)} votes
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-// ---------------------- Poll Detail ----------------------
-function PollDetail() {
+// ---------------------- Poll Detail Component ----------------------
+export function PollDetail() { // Export components individually
   const { id } = useParams();
   const [poll, setPoll] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [voteMessage, setVoteMessage] = useState(null);
+  const navigate = useNavigate();
 
   const fetchPoll = async () => {
-    const res = await api.get(`/polls/${id}`);
-    setPoll(res.data);
+    setLoading(true);
+    setError(null);
+    setVoteMessage(null); // Clear previous messages
+    try {
+      const res = await api.get(`/polls/${id}`); // Use shared instance
+      setPoll(res.data);
+      setSelectedOptionIndex(null); // Reset selection on data fetch/refresh
+    } catch (err) {
+      console.error(`Failed to fetch poll ${id}:`, err);
+       if (err.response && err.response.status === 404) {
+         setError("Poll not found.");
+       } else if (err.response && err.response.status === 400) {
+         setError("Invalid Poll ID format.");
+       } else {
+         setError("Could not load poll details.");
+       }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchPoll();
-  }, [id]);
+  }, [id]); // Refetch when ID changes
 
-  const vote = async () => {
-    if (selected === null) return alert("Select option");
+  const handleVote = async () => {
+    if (selectedOptionIndex === null) {
+        setVoteMessage({ type: 'error', text: 'Please select an option before voting.' });
+        return;
+    }
+    setVoteMessage(null); // Clear previous message
+
+    // Check if user is logged in (if voting is protected)
+    // const token = localStorage.getItem('token');
+    // if (!token && /* voting is protected */) {
+    //    setVoteMessage({ type: 'error', text: 'You must be logged in to vote.' });
+    //    // Optional: Redirect to login after a delay
+    //    // setTimeout(() => navigate('/login'), 2000);
+    //    return;
+    // }
+
     try {
-      await api.post(`/polls/${id}/vote`, { optionIndex: selected });
-      await fetchPoll();
-      alert("Voted!");
+      // Use shared instance
+      await api.post(`/polls/${id}/vote`, { optionIndex: selectedOptionIndex });
+      setVoteMessage({ type: 'success', text: 'Your vote has been recorded!' });
+      await fetchPoll(); // Refresh poll data to show updated results
     } catch (err) {
-      alert(err.response?.data?.msg || "Error voting");
+      console.error("Error submitting vote:", err);
+      let errMsg = "Error submitting vote.";
+       if (err.response) {
+            errMsg = err.response.data?.msg || "An error occurred on the server.";
+            if (err.response.status === 401) errMsg = "Authentication error. Please log in again.";
+       } else if (err.request) {
+           errMsg = "Could not connect to the server.";
+       }
+      setVoteMessage({ type: 'error', text: errMsg });
     }
   };
 
-  if (!poll) return <div className="text-center text-gray-400">Loading...</div>;
+  if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading poll details...</div>;
+  if (error) return <div className="text-center p-6 text-red-500">{error}</div>;
+  if (!poll) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Poll data not available.</div>;
 
-  const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
+  const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4 text-white">{poll.question}</h2>
-      <ul className="space-y-4 mb-6">
-        {poll.options.map((opt, idx) => (
-          <li key={idx}>
-            <label className="flex items-center space-x-2 text-gray-300 cursor-pointer">
-              <input
-                type="radio"
-                name="opt"
-                onChange={() => setSelected(idx)}
-                checked={selected === idx}
-                className="form-radio text-blue-500"
-              />
-              <span>
-                {opt.text} — {opt.votes} votes
-                {totalVotes > 0 ? ` (${Math.round((opt.votes / totalVotes) * 100)}%)` : ""}
-              </span>
-            </label>
-          </li>
-        ))}
-      </ul>
-      <button
-        onClick={vote}
-        className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-      >
-        Vote
+    <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl mx-auto">
+      <button onClick={() => navigate('/voting')} className="mb-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+          &larr; Back to Poll List
       </button>
+      <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-900 dark:text-white">{poll.question}</h2>
+       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+           Created by {poll.createdBy?.name || "Unknown User"} on {new Date(poll.createdAt).toLocaleDateString()}
+       </p>
 
-      <h3 className="text-xl font-semibold mt-8 mb-4 text-white">Results</h3>
-      <div className="space-y-4">
-        {poll.options.map((opt, idx) => (
-          <div key={idx} className="bg-gray-700 p-3 rounded-md">
-            <div className="flex justify-between text-gray-300">
-              <span>{opt.text}</span>
-              <span>
-                {opt.votes} ({totalVotes ? Math.round((opt.votes / totalVotes) * 100) : 0}%)
-              </span>
+        {/* Voting Section */}
+        <fieldset className="mb-6">
+            <legend className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Cast Your Vote:</legend>
+            <div className="space-y-3">
+            {poll.options.map((option, index) => (
+                <label key={index} className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150">
+                <input
+                    type="radio"
+                    name="pollOption"
+                    value={index}
+                    checked={selectedOptionIndex === index}
+                    onChange={() => setSelectedOptionIndex(index)}
+                    className="form-radio h-5 w-5 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-600"
+                />
+                <span className="text-gray-800 dark:text-gray-200">{option.text}</span>
+                </label>
+            ))}
             </div>
-            <div className="mt-2 bg-gray-600 rounded-full h-3">
-              <div
-                style={{ width: `${totalVotes ? (opt.votes / totalVotes) * 100 : 0}%` }}
-                className="bg-blue-500 h-full rounded-full transition-all duration-500 ease-in-out"
-              />
+        </fieldset>
+
+        {voteMessage && (
+            <div className={`my-4 p-3 rounded-md text-sm ${voteMessage.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'}`}>
+            {voteMessage.text}
             </div>
-          </div>
-        ))}
-      </div>
+        )}
+
+        <button
+            onClick={handleVote}
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+        >
+            Submit Vote
+        </button>
+
+      {/* Results Section */}
+      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Results</h3>
+        {totalVotes === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">No votes cast yet.</p>
+        ) : (
+            <div className="space-y-4">
+            {poll.options.map((option, index) => {
+                const percentage = totalVotes > 0 ? ((option.votes / totalVotes) * 100).toFixed(1) : 0;
+                return (
+                <div key={index} className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
+                    <div className="flex justify-between items-center text-sm mb-1 text-gray-800 dark:text-gray-200">
+                    <span className="font-medium">{option.text}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{option.votes} votes ({percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2.5">
+                    <div
+                        className="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${percentage}%` }}
+                    ></div>
+                    </div>
+                </div>
+                );
+            })}
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">Total Votes: {totalVotes}</p>
+            </div>
+        )}
+        </div>
     </div>
   );
 }
 
-// ---------------------- Create Poll ----------------------
-function CreatePoll() {
-  const [question, setQuestion] = useState("");
-  const [optionsText, setOptionsText] = useState("");
-  const navigate = useNavigate();
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    const options = optionsText.split("\n").map((s) => s.trim()).filter(Boolean);
-    if (options.length < 2) return alert("Provide at least 2 options");
-    try {
-      await api.post(`/polls`, { question, options });
-      navigate("/");
-    } catch (err) {
-      alert(err.response?.data?.msg || "Error creating poll. Are you logged in?");
-    }
-  };
-
-  return (
-    <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-lg mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-white">Create Poll</h2>
-      <input
-        placeholder="Question"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <textarea
-        placeholder="One option per line"
-        value={optionsText}
-        onChange={(e) => setOptionsText(e.target.value)}
-        rows={6}
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none"
-      />
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-      >
-        Create
-      </button>
-    </form>
-  );
-}
-
-// ---------------------- Login ----------------------
-function Login() {
-  const [form, setForm] = useState({ userId: "", password: "" }); // Changed email to userId
-  const navigate = useNavigate();
-
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await api.post(`/auth/login`, form);
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      navigate("/");
-    } catch (err) {
-      alert(err.response?.data?.msg || "Error");
-    }
-  };
-
-  return (
-    <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-sm mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-white text-center">Login</h2>
-      <input
-        name="userId" // Changed from email
-        placeholder="User ID"
-        value={form.userId}
-        onChange={onChange}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <input
-        name="password"
-        placeholder="Password"
-        type="password"
-        value={form.password}
-        onChange={onChange}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-      >
-        Login
-      </button>
-    </form>
-  );
-}
-
-// ---------------------- Signup ----------------------
-function Signup() {
-    const [form, setForm] = useState({ name: "", userId: "", password: "" }); // Changed email to userId
-    const navigate = useNavigate();
-
-    const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-    const onSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await api.post(`/auth/register`, form);
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
-            navigate("/");
-        } catch (err) {
-            alert(err.response?.data?.msg || "Error");
-        }
-    };
-
-    return (
-        <form onSubmit={onSubmit} className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-sm mx-auto">
-            <h2 className="text-2xl font-bold mb-4 text-white text-center">Signup</h2>
-            <input
-                name="name"
-                placeholder="Name"
-                value={form.name}
-                onChange={onChange}
-                required
-                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-            />
-            <input
-                name="userId" // Changed from email
-                placeholder="User ID"
-                value={form.userId}
-                onChange={onChange}
-                required
-                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-            />
-            <input
-                name="password"
-                placeholder="Password"
-                type="password"
-                value={form.password}
-                onChange={onChange}
-                required
-                className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-            />
-            <button
-                type="submit"
-                className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-            >
-                Signup
-            </button>
-        </form>
-    );
-}
-
-
-// ---------------------- Main App ----------------------
-export default function App() {
-  return (
-    <Router>
-      <NavBar />
-      <div className="container mx-auto mt-6">
-        <Routes>
-          <Route path="/" element={<PollList />} />
-          <Route path="/poll/:id" element={<PollDetail />} />
-          <Route path="/create" element={<CreatePoll />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
-
+// --- Removed NavBar, Login, Signup, App - These should be in the main app structure ---

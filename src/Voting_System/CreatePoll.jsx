@@ -1,9 +1,8 @@
 // src/Voting_System/CreatePoll.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// --- FIX: Import the shared api instance ---
+import api from "../api"; // Adjust the path if api.js is in a different directory
 
 export default function CreatePoll() {
   const [question, setQuestion] = useState("");
@@ -15,42 +14,74 @@ export default function CreatePoll() {
     const options = optionsText
       .split("\n")
       .map((s) => s.trim())
-      .filter(Boolean);
-    if (options.length < 2) return alert("Provide at least 2 options");
+      .filter(Boolean); // Filter out empty lines
+
+    if (!question.trim()) return alert("Please enter a question.");
+    if (options.length < 2) return alert("Provide at least 2 valid options (one per line).");
+
     try {
-      await axios.post(`${API_URL}/polls`, { question, options });
-      navigate("/");
+      // --- FIX: Use the configured api instance ---
+      const response = await api.post(`/polls`, { question, options });
+      console.log("Poll created:", response.data);
+      // Navigate to the main poll list or the newly created poll's detail page
+      navigate("/voting"); // Or navigate(`/poll/${response.data._id}`) if backend returns the new poll object with _id
     } catch (err) {
-      alert(err.response?.data?.msg || "Error creating poll");
+      console.error("Error creating poll:", err);
+      // Provide more specific feedback based on error response
+      let errorMessage = "Error creating poll.";
+      if (err.response) {
+          if (err.response.status === 401) {
+              errorMessage = "Authentication error. Please log in again.";
+              // Optionally redirect to login: navigate('/login');
+          } else {
+              errorMessage = err.response.data?.msg || "An error occurred on the server.";
+          }
+      } else if (err.request) {
+          errorMessage = "Could not connect to the server. Please check your network.";
+      }
+      alert(errorMessage);
     }
   };
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="p-4 bg-gray-800 rounded-lg shadow-lg max-w-lg mx-auto"
-    >
-      <h2 className="text-2xl font-bold mb-4 text-white">Create Poll</h2>
-      <input
-        placeholder="Question"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        required
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500"
-      />
-      <textarea
-        placeholder="One option per line"
-        value={optionsText}
-        onChange={(e) => setOptionsText(e.target.value)}
-        rows={6}
-        className="w-full p-2 mb-4 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:border-blue-500 resize-none"
-      />
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200"
-      >
-        Create
-      </button>
-    </form>
+    // Assuming this component might be rendered within a layout that provides the dark mode context
+    // If used standalone, you might need to wrap it or add bg/text colors directly
+    <div className="container mx-auto mt-6 p-4">
+        <form
+        onSubmit={onSubmit}
+        className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-lg mx-auto"
+        >
+        <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Create a New Poll</h2>
+        <div className="mb-4">
+            <label htmlFor="question" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Poll Question</label>
+            <input
+            id="question"
+            placeholder="What do you want to ask?"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            required
+            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+        </div>
+        <div className="mb-6">
+             <label htmlFor="options" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Options (One per line, at least 2)</label>
+            <textarea
+            id="options"
+            placeholder="Option 1\nOption 2\nOption 3..."
+            value={optionsText}
+            onChange={(e) => setOptionsText(e.target.value)}
+            rows={5}
+            required
+            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+        </div>
+        <button
+            type="submit"
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+        >
+            Create Poll
+        </button>
+        </form>
+    </div>
   );
 }
