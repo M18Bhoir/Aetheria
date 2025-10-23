@@ -1,27 +1,46 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import jwt from "jsonwebtoken";
+import User from "../models/User.js"; // Correct path
 
 const protect = async (req, res, next) => {
   let token;
-  if (req.headers.authorization?.startsWith('Bearer')) {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith("Bearer ")) {
     try {
-      token = req.headers.authorization.split(' ')[1];
+      token = authHeader.split(" ")[1];
+
+      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const userId = decoded.user?.id;
-      if (!userId) return res.status(401).json({ msg: 'Token payload invalid' });
+      // --- Expect consistent payload: { user: { id: userId } } ---
+      const userIdFromToken = decoded.user?.id;
+      if (!userIdFromToken) {
+        console.error("JWT payload missing user.id:", decoded);
+        return res.status(401).json({ msg: "Not authorized, token payload invalid" });
+      }
 
-      req.user = await User.findById(userId).select('-password');
-      if (!req.user) return res.status(401).json({ msg: 'User not found' });
+      // Fetch user from DB using the ID from the token
+      req.user = await User.findById(userIdFromToken).select("-password"); // Use findById with the token ID
 
-      next();
+      if (!req.user) {
+         return res.status(401).json({ msg: "Not authorized, user not found" });
+      }
+
+      // User is authenticated, proceed
+      return next();
+
     } catch (err) {
-      console.error('Token error:', err.message);
-      if (err.name === 'TokenExpiredError') return res.status(401).json({ msg: 'Token expired' });
-      return res.status(401).json({ msg: 'Token invalid' });
+      console.error('Token verification failed:', err.message);
+      if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ msg: "Not authorized, token expired" });
+      }
+      return res.status(401).json({ msg: "Not authorized, token failed" });
     }
-  } else {
-    return res.status(401).json({ msg: 'No token, authorization denied' });
+  }
+
+  // No token found
+  if (!token) {
+    res.status(401).json({ msg: "Not authorized, no token" });
   }
 };
 
