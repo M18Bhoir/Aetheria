@@ -5,97 +5,113 @@ import { BrowserRouter as Router, Routes, Route, Link, Outlet, Navigate } from '
 import LandingPage from './LandingPage/LandingPage';
 import Login from './LoginSignUp/Login';
 import Signup from './LoginSignUp/SignUp';
-import AdminDashboard from './Dashboard/Dashboard';
-import UserDashboard from './UserDashBoard/User_Dashboard';
+import AdminDashboard from './Dashboard/Dashboard'; // Assuming this is for Admin
+import UserDashboard from './UserDashBoard/User_Dashboard'; // User's main dashboard view
 import Profile from './Profile/Profile';
 import { PollList, PollDetail } from './Voting_System/VotingSystem';
 import CreatePoll from './Voting_System/CreatePoll';
+// --- Import Booking Components ---
+import AmenityBooking from './Booking/AmenityBooking';
+import MyBookings from './Booking/MyBooking';
+// --- Import Marketplace Components ---
+import MarketplaceList from './Marketplace/MarketplaceList';
+import MarketplaceItemDetail from './Marketplace/MarketplaceItem';
+import CreateMarketplaceItem from './Marketplace/MarketplaceItem';
+import MyListings from './Marketplace/MyListingView';
 
 // --- Layout Component Imports ---
-import Sidebar from './Components/Sidebar'; // Assuming Sidebar is here
-import NoticeBoard from './Components/NoticeBoard'; // Assuming NoticeBoard is here
+import Sidebar from './Components/Sidebar';
+// import NoticeBoard from './Components/NoticeBoard'; // Keep commented if not used
 
 import './index.css';
 
-// --- 1. Shared Layout for the User Dashboard ---
-// This component renders the shared sidebar and notice board,
-// and <Outlet /> renders the specific page (e.g., Home, Profile, Voting).
+// --- User Layout Component ---
+// Renders Sidebar and the main content area via <Outlet>
 function UserLayout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Sidebar state
 
   return (
-    <div className="flex w-full">
+    <div className="flex w-full bg-gray-100 dark:bg-gray-900 min-h-screen"> {/* Ensure min height */}
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      <main className="flex-grow h-screen overflow-y-auto p-6 bg-gray-100">
-        <Outlet /> {/* This is where child routes will render */}
+      {/* Main content area */}
+      <main className="flex-grow h-screen overflow-y-auto p-6"> {/* Added scroll */}
+        <Outlet /> {/* Child routes render here */}
       </main>
-      <NoticeBoard />
+      {/* Optional Right Sidebar/NoticeBoard */}
+      {/* <NoticeBoard /> */}
     </div>
   );
 }
 
-// --- 2. Protected Route Component ---
-// This component checks for an auth token. If it doesn't exist,
-// it redirects the user to the /login page.
+// --- Protected Route Component ---
+// Checks for auth token, redirects to login if missing
 function ProtectedRoute() {
-  const token = localStorage.getItem('token');
-  
+  const token = localStorage.getItem('token'); // Use the standardized key 'token'
+
   if (!token) {
-    // If no token, redirect to login
+    // User not logged in, redirect to login page
+    // 'replace' prevents going back to the protected route after logging in
     return <Navigate to="/login" replace />;
   }
-  
-  // If token exists, render the child component (in this case, our layouts)
+
+  // User is logged in, render the nested routes (Outlet)
   return <Outlet />;
 }
 
-// --- 3. Main App Component with Updated Routes ---
+// --- Main App Component ---
 function App() {
   return (
     <Router>
-      {/* The main wrapper div is removed from here to allow
-        public pages (like LandingPage) to control their own full-screen layout.
-        The layouts themselves (UserLayout) now manage their styling.
-      */}
       <Routes>
-        {/* === Public Routes === */}
-        {/* These routes are not protected and don't have the sidebar */}
+        {/* === Public Routes (No Layout, No Auth) === */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* === Protected Routes === */}
-        {/* All routes inside this element will check for a token first */}
+        {/* === Protected Routes (Require Auth) === */}
         <Route element={<ProtectedRoute />}>
-          
-          {/* --- User Dashboard Layout --- */}
-          {/* All these routes will render *inside* the UserLayout component */}
+
+          {/* --- User Dashboard Layout & Routes --- */}
           <Route path="/dashboard" element={<UserLayout />}>
-            <Route index element={<UserDashboard />} /> {/* /dashboard */}
-            <Route path="profile" element={<Profile />} /> {/* /dashboard/profile */}
-            <Route path="voting" element={<PollList />} /> {/* /dashboard/voting */}
-            <Route path="poll/:id" element={<PollDetail />} /> {/* /dashboard/poll/123 */}
-            <Route path="voting/create" element={<CreatePoll />} /> {/* /dashboard/voting/create */}
+            {/* Index route for the main dashboard view */}
+            <Route index element={<UserDashboard />} />
+            {/* Profile Page */}
+            <Route path="profile" element={<Profile />} />
+            {/* Voting System Routes */}
+            <Route path="voting" element={<PollList />} />
+            <Route path="poll/:id" element={<PollDetail />} />
+            <Route path="voting/create" element={<CreatePoll />} />
+            {/* Amenity Booking Routes */}
+            <Route path="booking" element={<AmenityBooking />} />
+            <Route path="my-bookings" element={<MyBookings />} />
+            {/* Marketplace Routes */}
+            <Route path="marketplace" element={<MarketplaceList />} />
+            <Route path="marketplace/new" element={<CreateMarketplaceItem />} /> {/* Route to create */}
+            <Route path="marketplace/:itemId" element={<MarketplaceItemDetail />} /> {/* Route for details */}
+            <Route path="my-listings" element={<MyListings />} /> {/* Route for user's listings */}
+
+            {/* Add other user routes here (e.g., notices, complaints) */}
+            {/* <Route path="notices" element={<NoticesPage />} /> */}
           </Route>
-          
-          {/* --- Admin Route --- */}
-          {/* This route is also protected but uses a different element.
-              You would create an "AdminLayout" for it later. */}
+
+          {/* --- Admin Route (Example - Assuming separate layout/component) --- */}
+          {/* Add admin-specific protection if needed */}
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          {/* Add other admin routes here */}
 
-        </Route>
+        </Route> {/* End ProtectedRoute */}
 
-        {/* === 404 Fallback === */}
-        <Route 
-          path="*" 
+        {/* === 404 Not Found Route === */}
+        <Route
+          path="*"
           element={
-            <div className="flex flex-col items-center justify-center min-h-screen w-full">
-              <h2 className="text-4xl font-bold">404 Not Found</h2>
-              <Link to="/" className="text-blue-500 hover:underline mt-4">
-                Go Home
+            <div className="flex flex-col items-center justify-center min-h-screen">
+              <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
+              <Link to="/" className="text-blue-500 hover:underline">
+                Go back to Landing Page
               </Link>
             </div>
-          } 
+          }
         />
       </Routes>
     </Router>
@@ -103,3 +119,4 @@ function App() {
 }
 
 export default App;
+

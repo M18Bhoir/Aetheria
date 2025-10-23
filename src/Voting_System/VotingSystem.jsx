@@ -1,26 +1,29 @@
 // src/Voting_System/VotingSystem.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-// --- FIX: Import the shared api instance ---
-import api from "../api"; // Adjust path as needed
+// Corrected import path
+import api from "../utils/api";
 
 // ---------------------- Poll List Component ----------------------
-export function PollList() { // Export components individually
+export function PollList() {
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // For navigation buttons
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPolls = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get(`/polls`); // Use shared instance
+        // Use the /api prefix
+        const res = await api.get(`/api/polls`);
         setPolls(res.data);
       } catch (err) {
         console.error("Failed to fetch polls:", err);
-        setError("Could not load polls. Please try again later.");
+         if (err.message !== "Unauthorized access - Redirecting to login.") {
+             setError(err.response?.data?.message || err.response?.data?.msg || "Could not load polls. Please try again later.");
+         }
       } finally {
         setLoading(false);
       }
@@ -28,7 +31,6 @@ export function PollList() { // Export components individually
     fetchPolls();
   }, []);
 
-  // Check if user is logged in (optional, for showing Create button)
   const isLoggedIn = !!localStorage.getItem('token');
 
   if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading polls...</div>;
@@ -40,7 +42,7 @@ export function PollList() { // Export components individually
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Available Polls</h2>
         {isLoggedIn && (
            <button
-             onClick={() => navigate("/voting/create")} // Navigate to create poll page
+             onClick={() => navigate("/dashboard/voting/create")} // Correct path relative to App.jsx routes
              className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors duration-200"
            >
              Create New Poll
@@ -53,10 +55,11 @@ export function PollList() { // Export components individually
       ) : (
         <ul className="space-y-3">
           {polls.map((p) => (
-            <li key={p._id} // Use MongoDB's _id
+            <li key={p._id}
                 className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 flex justify-between items-center">
               <div>
-                  <Link to={`/poll/${p._id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-lg">
+                   {/* Link path adjusted to match App.jsx */}
+                  <Link to={`/dashboard/poll/${p._id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-lg">
                   {p.question}
                   </Link>
                   <span className="block text-gray-500 dark:text-gray-400 text-sm mt-1">
@@ -75,7 +78,7 @@ export function PollList() { // Export components individually
 }
 
 // ---------------------- Poll Detail Component ----------------------
-export function PollDetail() { // Export components individually
+export function PollDetail() {
   const { id } = useParams();
   const [poll, setPoll] = useState(null);
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
@@ -87,19 +90,22 @@ export function PollDetail() { // Export components individually
   const fetchPoll = async () => {
     setLoading(true);
     setError(null);
-    setVoteMessage(null); // Clear previous messages
+    setVoteMessage(null);
     try {
-      const res = await api.get(`/polls/${id}`); // Use shared instance
+      // Use the /api prefix
+      const res = await api.get(`/api/polls/${id}`);
       setPoll(res.data);
-      setSelectedOptionIndex(null); // Reset selection on data fetch/refresh
+      setSelectedOptionIndex(null);
     } catch (err) {
       console.error(`Failed to fetch poll ${id}:`, err);
+       if (err.message === "Unauthorized access - Redirecting to login.") { return; } // Handled by interceptor
+
        if (err.response && err.response.status === 404) {
          setError("Poll not found.");
        } else if (err.response && err.response.status === 400) {
          setError("Invalid Poll ID format.");
        } else {
-         setError("Could not load poll details.");
+         setError(err.response?.data?.message || err.response?.data?.msg || "Could not load poll details.");
        }
     } finally {
       setLoading(false);
@@ -108,35 +114,36 @@ export function PollDetail() { // Export components individually
 
   useEffect(() => {
     fetchPoll();
-  }, [id]); // Refetch when ID changes
+  }, [id]);
 
   const handleVote = async () => {
     if (selectedOptionIndex === null) {
         setVoteMessage({ type: 'error', text: 'Please select an option before voting.' });
         return;
     }
-    setVoteMessage(null); // Clear previous message
+    setVoteMessage(null);
 
-    // Check if user is logged in (if voting is protected)
+    // Optional: Check if logged in before allowing vote (if backend doesn't handle it)
     // const token = localStorage.getItem('token');
-    // if (!token && /* voting is protected */) {
+    // if (!token) {
     //    setVoteMessage({ type: 'error', text: 'You must be logged in to vote.' });
-    //    // Optional: Redirect to login after a delay
-    //    // setTimeout(() => navigate('/login'), 2000);
     //    return;
     // }
 
     try {
-      // Use shared instance
-      await api.post(`/polls/${id}/vote`, { optionIndex: selectedOptionIndex });
+      // Use the /api prefix
+      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex });
       setVoteMessage({ type: 'success', text: 'Your vote has been recorded!' });
-      await fetchPoll(); // Refresh poll data to show updated results
+      await fetchPoll(); // Refresh poll data
     } catch (err) {
       console.error("Error submitting vote:", err);
+      if (err.message === "Unauthorized access - Redirecting to login.") { return; } // Handled by interceptor
+
       let errMsg = "Error submitting vote.";
        if (err.response) {
-            errMsg = err.response.data?.msg || "An error occurred on the server.";
-            if (err.response.status === 401) errMsg = "Authentication error. Please log in again.";
+            errMsg = err.response.data?.message || err.response.data?.msg || "An error occurred on the server.";
+            // Keep the 401 message simple as redirect is handled
+            if (err.response.status === 401) errMsg = "Authentication error.";
        } else if (err.request) {
            errMsg = "Could not connect to the server.";
        }
@@ -152,7 +159,8 @@ export function PollDetail() { // Export components individually
 
   return (
     <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl mx-auto">
-      <button onClick={() => navigate('/voting')} className="mb-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+       {/* Button path adjusted */}
+      <button onClick={() => navigate('/dashboard/voting')} className="mb-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">
           &larr; Back to Poll List
       </button>
       <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-900 dark:text-white">{poll.question}</h2>
@@ -224,5 +232,3 @@ export function PollDetail() { // Export components individually
     </div>
   );
 }
-
-// --- Removed NavBar, Login, Signup, App - These should be in the main app structure ---

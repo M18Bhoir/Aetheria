@@ -1,17 +1,15 @@
 // src/LoginSignUp/Login.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import api from "../api"; // Import the shared api instance
+import { useNavigate } from "react-router-dom";
+import api from "../utils/api"; // Corrected import path
 
-// Lucide Icon for Person/User
+// Lucide Icon components (keep as they are)
 const PersonIcon = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user">
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
-
-// Lucide Icon for Lock/Password
 const LockIcon = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock">
     <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
@@ -19,19 +17,15 @@ const LockIcon = (props) => (
   </svg>
 );
 
-const Login = () => { // Changed component name to start with uppercase
-  // State for form inputs and UI feedback
-  const [userId, setUserId] = useState(""); // Stores either userId or adminId
+
+const Login = () => {
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // State to toggle between User (true) and Admin (false)
   const [isUserLogin, setIsUserLogin] = useState(true);
-
   const navigate = useNavigate();
 
-  // Clear inputs and messages when the role is toggled
   useEffect(() => {
     setUserId("");
     setPassword("");
@@ -44,47 +38,38 @@ const Login = () => { // Changed component name to start with uppercase
     setLoading(true);
 
     const roleName = isUserLogin ? "user" : "admin";
-    const apiUrlPath = isUserLogin ? "/api/auth/login" : "/api/admin/login"; // Use correct backend paths
-    const successPath = isUserLogin ? "/User_Dashboard" : "/admin-dashboard";
-    const idField = isUserLogin ? 'userId' : 'adminId'; // Dynamic field name for payload
+    // Ensure these paths match your backend routes EXACTLY
+    const apiUrlPath = isUserLogin ? "/api/auth/login" : "/api/admin/login";
+    // Corrected navigation path for user
+    const successPath = isUserLogin ? "/dashboard" : "/admin-dashboard";
+    const idField = isUserLogin ? 'userId' : 'adminId';
 
     try {
       console.log(`Attempting to log in as ${roleName} to: ${apiUrlPath}`);
 
       const payload = {
-          [idField]: userId, // Use dynamic key
+          [idField]: userId,
           password: password
       };
       console.log("Sending payload:", payload);
 
-      // --- Use shared API instance ---
+      // Use the configured api instance
       const response = await api.post(apiUrlPath, payload);
-      const data = response.data; // Axios puts response data directly in .data
+      const data = response.data;
 
-      if (data.token) { // Check if token exists in response data
-        // Successful login
+      if (data.token) {
         const token = data.token;
+        setMessage({ type: "success", text: `Login successful! Redirecting...` });
+        localStorage.setItem('token', token); // Use standardized key
 
-        setMessage({
-          type: "success",
-          text: `Login successful! Redirecting...`
-        });
+        // Store user/admin info if provided
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+        else if (data.admin) localStorage.setItem('admin', JSON.stringify(data.admin));
 
-        // --- FIX: Use standardized 'token' key ---
-        localStorage.setItem('token', token);
-
-        // Optionally store basic user/admin info if returned by backend
-        if (data.user) {
-            localStorage.setItem('user', JSON.stringify(data.user));
-        } else if (data.admin) {
-             localStorage.setItem('admin', JSON.stringify(data.admin)); // If backend sends admin info
-        }
-
-        // Navigate after a short delay
+        // Correct navigation path
         setTimeout(() => navigate(successPath), 1000);
 
       } else {
-         // Should not happen if backend sends token on success, but good practice
          console.error("Login response missing token:", data);
          setMessage({ type: "error", text: "Login failed: No token received." });
       }
@@ -92,29 +77,31 @@ const Login = () => { // Changed component name to start with uppercase
     } catch (error) {
       console.error("Login failed:", error);
       let errorMessage = "Login failed. Please try again.";
-      if (error.response) {
-          // Error response from server (e.g., 400, 401)
-          errorMessage = error.response.data.message || `Invalid ${roleName} ID or Password.`;
-          console.error('Server responded with error:', error.response.status, error.response.data);
-      } else if (error.request) {
-          // No response received (network error, server down)
-          errorMessage = "Network error. Could not connect to the server.";
-          console.error('Network error:', error.request);
-      } else {
-          // Other errors (e.g., setting up the request)
-          errorMessage = `An unexpected error occurred: ${error.message}`;
-          console.error('Error setting up request:', error.message);
-      }
-      setMessage({ type: "error", text: errorMessage });
+       if (error.response) {
+            errorMessage = error.response.data.message || error.response.data.msg || `Invalid ${roleName} ID or Password.`; // Accept 'msg' or 'message'
+            console.error('Server responded with error:', error.response.status, error.response.data);
+       } else if (error.request) {
+           errorMessage = "Network error. Could not connect to the server.";
+           console.error('Network error:', error.request);
+       } else if (error.message === "Unauthorized access - Redirecting to login.") {
+           // This specific error comes from our interceptor, avoid double messaging
+           errorMessage = null; // Let the interceptor handle the redirect without a message here
+       } else {
+           errorMessage = `An unexpected error occurred: ${error.message}`;
+           console.error('Error setting up request:', error.message);
+       }
+       if (errorMessage) { // Only set message if it's not handled by interceptor redirect
+           setMessage({ type: "error", text: errorMessage });
+       }
     } finally {
       setLoading(false);
     }
   };
 
-  const primaryColor = isUserLogin ? '#ff6347' : '#4d94ff'; // User: Tomato, Admin: Bright Blue
+  const primaryColor = isUserLogin ? '#ff6347' : '#4d94ff';
   const secondaryColor = isUserLogin ? '#ff9478' : '#78b1ff';
 
-  // --- JSX remains largely the same, just ensure component name is Login ---
+  // --- JSX remains the same ---
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f0f1e] w-full p-4 font-sans">
       <style jsx global>{`
@@ -256,4 +243,4 @@ const Login = () => { // Changed component name to start with uppercase
   );
 };
 
-export default Login; // Export with uppercase name
+export default Login;

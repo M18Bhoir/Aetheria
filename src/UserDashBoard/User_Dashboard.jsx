@@ -1,66 +1,104 @@
 import React, { useState, useEffect } from 'react';
-import api from '../utils/api'; 
+// Corrected import path
+import api from '../utils/api';
 
-// --- 1. ---
-// We REMOVE the imports for Sidebar and NoticeBoard
-// because App.jsx (UserLayout) is now handling them.
-// import Sidebar from '../Components/Sidebar';
-// import NoticeBoard from '../Components/NoticeBoard';
-
+// Imports for Sidebar and NoticeBoard are removed as they are handled by UserLayout
 
 function User_Dashboard() {
   const [dues, setDues] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userName, setUserName] = useState(''); // State to hold user name
 
   useEffect(() => {
-    // This data fetching logic is perfect. No changes needed.
+     // Fetch user data from local storage to display name
+     const storedUser = localStorage.getItem('user');
+     if (storedUser) {
+       try {
+         const userData = JSON.parse(storedUser);
+         setUserName(userData.name || 'User'); // Use name or default
+       } catch (e) {
+         console.error("Failed to parse user data from localStorage", e);
+         setUserName('User');
+       }
+     } else {
+        setUserName('User'); // Default if no user data found
+     }
+
+
     const fetchDues = async () => {
+      setIsLoading(true); // Ensure loading is true at the start
+      setError(null);
       try {
-        const res = await api.get('/api/user/dues');
-        setDues(res.data.dues);
+        // The API path should match your backend route, likely prefixed with /api
+        const res = await api.get('/api/user/dues'); // Using the configured api instance
+        setDues(res.data.dues); // Assuming backend sends { dues: amount }
       } catch (err) {
         console.error("Failed to fetch dues:", err);
-        setError("Could not load your dues.");
+         if (err.message !== "Unauthorized access - Redirecting to login.") { // Avoid double messaging
+             setError(err.response?.data?.message || err.response?.data?.msg || "Could not load your dues data.");
+         }
       } finally {
         setIsLoading(false);
       }
     };
     fetchDues();
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
-  if (isLoading) {
-    // Keep this simple, as it's just a part of the page
-    return <div><h1>Loading...</h1></div>;
-  }
+  // --- Render logic remains largely the same ---
+  // Added conditional rendering for loading and error states
 
-  if (error) {
-    return <div className="text-red-500"><h1>Error: {error}</h1></div>;
-  }
-
-  // --- 2. ---
-  // We REMOVE the layout <div>s.
-  // This component now *only* returns the main page content.
-  // This content will be placed inside the <main> tag of your UserLayout.
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">User Dashboard</h1>
-      
-      {/* This is the "Dues" widget */}
-      <div className="p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-xl font-medium">
-          Your Current Dues: 
-          <span className="text-2xl font-bold text-blue-600 ml-3">
-            {typeof dues === 'number' 
-              ? `₹${dues.toLocaleString('en-IN')}`
-              : 'N/A'
-            }
-          </span>
+      {/* Welcome message */}
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">
+          Welcome, {userName}!
+      </h1>
+
+      {/* Dues Widget */}
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6"> {/* Added mb-6 */}
+        <h2 className="text-xl font-semibold mb-3 text-gray-700 dark:text-gray-200">
+          Your Current Dues
         </h2>
+        {isLoading && <p className="text-gray-500 dark:text-gray-400">Loading dues...</p>}
+        {error && <p className="text-red-500 dark:text-red-400">Error: {error}</p>}
+        {!isLoading && !error && (
+          <p className="text-gray-900 dark:text-white">
+            Amount:
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 ml-3">
+              {dues !== null && typeof dues.amount === 'number'
+                ? `₹${dues.amount.toLocaleString('en-IN')}`
+                : 'N/A'
+              }
+            </span>
+            {dues?.dueDate && (
+                 <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">
+                     Due Date: {new Date(dues.dueDate).toLocaleDateString()}
+                 </span>
+            )}
+            {dues?.status && (
+                <span className={`block text-sm mt-1 font-medium ${
+                    dues.status === 'Paid' ? 'text-green-600 dark:text-green-400' :
+                    dues.status === 'Overdue' ? 'text-red-600 dark:text-red-400' :
+                    'text-yellow-600 dark:text-yellow-400' // Pending
+                }`}>
+                    Status: {dues.status}
+                </span>
+            )}
+          </p>
+        )}
       </div>
 
-      {/* When you're ready, you can add your voting system here */}
-      {/* <VotingSystem /> */}
+      {/* Placeholder for other dashboard components/widgets */}
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+           <h2 className="text-xl font-semibold mb-3 text-gray-700 dark:text-gray-200">
+               Quick Actions
+           </h2>
+           <p className="text-gray-500 dark:text-gray-400">
+               {/* Add links or buttons here, e.g., to Voting System */}
+               <a href="/dashboard/voting" className="text-blue-600 dark:text-blue-400 hover:underline">Go to Voting</a>
+           </p>
+       </div>
 
     </div>
   );
