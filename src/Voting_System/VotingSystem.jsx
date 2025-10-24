@@ -1,7 +1,7 @@
 // src/Voting_System/VotingSystem.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-// Corrected import path
+// --- CORRECTED: Use the consistent API instance ---
 import api from "../utils/api";
 
 // ---------------------- Poll List Component ----------------------
@@ -16,14 +16,13 @@ export function PollList() {
       setLoading(true);
       setError(null);
       try {
-        // Use the /api prefix
-        const res = await api.get(`/api/polls`);
-        setPolls(res.data);
+        const res = await api.get(`/api/polls`); // Use /api prefix
+        setPolls(res.data); // Assuming backend sends array directly
       } catch (err) {
         console.error("Failed to fetch polls:", err);
-         if (err.message !== "Unauthorized access - Redirecting to login.") {
-             setError(err.response?.data?.message || err.response?.data?.msg || "Could not load polls. Please try again later.");
-         }
+        if (err.message !== "Unauthorized access - Redirecting to login.") {
+             setError(err.response?.data?.message || err.response?.data?.msg || "Could not load polls.");
+        }
       } finally {
         setLoading(false);
       }
@@ -92,13 +91,12 @@ export function PollDetail() {
     setError(null);
     setVoteMessage(null);
     try {
-      // Use the /api prefix
-      const res = await api.get(`/api/polls/${id}`);
+      const res = await api.get(`/api/polls/${id}`); // Use /api prefix
       setPoll(res.data);
       setSelectedOptionIndex(null);
     } catch (err) {
       console.error(`Failed to fetch poll ${id}:`, err);
-       if (err.message === "Unauthorized access - Redirecting to login.") { return; } // Handled by interceptor
+       if (err.message === "Unauthorized access - Redirecting to login.") { return; }
 
        if (err.response && err.response.status === 404) {
          setError("Poll not found.");
@@ -123,27 +121,22 @@ export function PollDetail() {
     }
     setVoteMessage(null);
 
-    // Optional: Check if logged in before allowing vote (if backend doesn't handle it)
-    // const token = localStorage.getItem('token');
-    // if (!token) {
-    //    setVoteMessage({ type: 'error', text: 'You must be logged in to vote.' });
-    //    return;
-    // }
-
     try {
-      // Use the /api prefix
-      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex });
+      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex }); // Use /api prefix
       setVoteMessage({ type: 'success', text: 'Your vote has been recorded!' });
       await fetchPoll(); // Refresh poll data
     } catch (err) {
       console.error("Error submitting vote:", err);
-      if (err.message === "Unauthorized access - Redirecting to login.") { return; } // Handled by interceptor
+      if (err.message === "Unauthorized access - Redirecting to login.") { return; }
 
       let errMsg = "Error submitting vote.";
        if (err.response) {
             errMsg = err.response.data?.message || err.response.data?.msg || "An error occurred on the server.";
-            // Keep the 401 message simple as redirect is handled
-            if (err.response.status === 401) errMsg = "Authentication error.";
+            if (err.response.status === 401) errMsg = "Authentication error. You may need to log in again.";
+             // Handle specific errors like "already voted" if backend sends them
+            if (err.response.data?.msg?.includes('already voted')) {
+                 errMsg = "You have already voted in this poll.";
+            }
        } else if (err.request) {
            errMsg = "Could not connect to the server.";
        }
@@ -173,7 +166,7 @@ export function PollDetail() {
             <legend className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Cast Your Vote:</legend>
             <div className="space-y-3">
             {poll.options.map((option, index) => (
-                <label key={index} className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150">
+                <label key={index} className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 dark:has-[:checked]:ring-blue-400">
                 <input
                     type="radio"
                     name="pollOption"

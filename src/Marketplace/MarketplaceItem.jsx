@@ -1,143 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { HiOutlineArrowLeft, HiOutlinePencil, HiOutlineTrash } from "react-icons/hi"; // Icons
+import { HiOutlineArrowLeft } from 'react-icons/hi';
 
-// Placeholder image function
-const placeholderImage = (text = 'No Image') => `https://placehold.co/600x400/EEE/31343C?text=${encodeURIComponent(text)}`;
+const CATEGORIES = ['Furniture', 'Electronics', 'Clothing', 'Books', 'Vehicle', 'Other'];
+const CONDITIONS = ['New', 'Like New', 'Used - Good', 'Used - Fair', 'Parts Only'];
 
-function MarketplaceItemDetail() {
-    const { itemId } = useParams();
+function CreateMarketplaceItem() {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [price, setPrice] = useState('');
+    const [category, setCategory] = useState(CATEGORIES[5]); // Default to Other
+    const [condition, setCondition] = useState(CONDITIONS[2]); // Default to Used - Good
+    const [imageUrl, setImageUrl] = useState('');
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const [item, setItem] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [currentUser, setCurrentUser] = useState(null); // To check ownership
 
-    useEffect(() => {
-        // Get current user info from local storage (simplified)
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            try {
-                setCurrentUser(JSON.parse(storedUser));
-            } catch (e) { console.error("Error parsing user from storage"); }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage({ type: '', text: '' });
+        setLoading(true);
+
+        const priceNum = parseFloat(price);
+        if (isNaN(priceNum) || priceNum < 0) {
+            setMessage({ type: 'error', text: 'Please enter a valid non-negative price.' });
+            setLoading(false);
+            return;
+        }
+         // Simple URL validation
+        if (imageUrl && !/^https?:\/\/.+/i.test(imageUrl)) {
+            setMessage({ type: 'error', text: 'Invalid Image URL. Must start with http:// or https://' });
+             setLoading(false);
+             return;
         }
 
-        const fetchItem = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const res = await api.get(`/api/marketplace/${itemId}`);
-                setItem(res.data);
-            } catch (err) {
-                console.error(`Failed to fetch item ${itemId}:`, err);
-                if (err.message !== "Unauthorized access - Redirecting to login.") {
-                     setError(err.response?.data?.message || 'Could not load item details.');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
+        try {
+            await api.post('/api/marketplace', {
+                title,
+                description,
+                price: priceNum,
+                category,
+                condition,
+                imageUrl,
+            });
+            setMessage({ type: 'success', text: 'Item listed successfully!' });
+            setTimeout(() => {
+                navigate('/dashboard/marketplace'); // Redirect to marketplace list
+            }, 1500);
 
-        fetchItem();
-    }, [itemId]);
-
-    const isOwner = currentUser && item && item.seller?._id === currentUser.id; // Check if current user owns the item
-
-     const handleDelete = async () => {
-        if (!isOwner) return;
-        if (window.confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
-            try {
-                await api.delete(`/api/marketplace/${item._id}`);
-                alert('Listing deleted successfully.');
-                navigate('/dashboard/my-listings'); // Go to user's listings page
-            } catch (err) {
-                 console.error("Failed to delete item:", err);
-                 alert(err.response?.data?.message || 'Failed to delete listing.');
-            }
+        } catch (err) {
+            console.error("Error listing item:", err);
+             if (err.message !== "Unauthorized access - Redirecting to login.") {
+                 setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to list item.' });
+             }
+        } finally {
+            setLoading(false);
         }
     };
 
-
-    if (loading) return <p className="text-center p-6 text-gray-500 dark:text-gray-400">Loading item details...</p>;
-    if (error) return <p className="text-center p-6 text-red-500 dark:text-red-400">Error: {error}</p>;
-    if (!item) return <p className="text-center p-6 text-gray-500 dark:text-gray-400">Item not found.</p>;
-
     return (
-        <div className="p-4 md:p-6 max-w-4xl mx-auto dark:text-gray-100">
-            <Link to="/dashboard/marketplace" className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline mb-4">
-                <HiOutlineArrowLeft className="h-4 w-4 mr-1" />
-                Back to Marketplace
-            </Link>
+        <div className="p-4 md:p-6 max-w-2xl mx-auto dark:text-gray-100">
+             <button onClick={() => navigate(-1)} className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline mb-4">
+                 <HiOutlineArrowLeft className="h-4 w-4 mr-1" />
+                 Back
+             </button>
+            <h1 className="text-2xl md:text-3xl font-bold mb-6 text-gray-900 dark:text-white">List New Item</h1>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden md:flex">
-                 {/* Image Section */}
-                 <div className="md:w-1/2">
-                    <img
-                        src={item.imageUrl || placeholderImage(item.title)}
-                        alt={item.title}
-                        onError={(e) => { e.target.onerror = null; e.target.src = placeholderImage(item.title); }}
-                        className="w-full h-64 md:h-full object-cover"
-                    />
+             {message.text && (
+                 <div className={`mb-4 p-3 rounded-md text-sm ${
+                     message.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
+                     'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                 }`}>
+                     {message.text}
                  </div>
+             )}
 
-                 {/* Details Section */}
-                 <div className="md:w-1/2 p-6 flex flex-col justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{item.title}</h1>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-                            Listed on: {new Date(item.createdAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">
-                            ₹{item.price.toLocaleString('en-IN')}
-                        </p>
+            <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                {/* Title */}
+                <div>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
+                    <input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength="100"
+                           className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                </div>
 
-                        <div className="space-y-2 text-sm mb-4">
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Category:</span> {item.category}</p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Condition:</span> {item.condition}</p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Status:</span>
-                                <span className={`ml-1 font-medium ${item.status === 'Available' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                                    {item.status}
-                                </span>
-                             </p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Seller:</span> {item.seller?.name || 'Unknown'} ({item.seller?.userId || 'N/A'})</p>
-                        </div>
+                {/* Description */}
+                <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description *</label>
+                    <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} required maxLength="1000" rows="4"
+                              className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"/>
+                </div>
 
-                        <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap mb-6">{item.description}</p>
-                    </div>
+                {/* Price */}
+                <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price (₹) *</label>
+                    <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" step="0.01"
+                           className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                </div>
 
-                    {/* Action Buttons */}
-                     <div className="mt-auto border-t pt-4 dark:border-gray-700">
-                        {isOwner ? (
-                             <div className="flex space-x-2">
-                                <button
-                                    // onClick={() => navigate(`/dashboard/marketplace/edit/${item._id}`)} // TODO: Add edit route/component
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600"
-                                    disabled // Temporarily disable edit
-                                >
-                                    <HiOutlinePencil className="h-4 w-4 mr-1"/> Edit (Coming Soon)
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                                >
-                                     <HiOutlineTrash className="h-4 w-4 mr-1"/> Delete
-                                </button>
-                             </div>
-                        ) : (
-                             <button
-                                // onClick={() => handleContactSeller()} // TODO: Implement contact logic (e.g., show email/phone or internal message)
-                                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                            >
-                                Contact Seller (Feature Coming Soon)
-                            </button>
-                        )}
-                    </div>
-                 </div>
-            </div>
+                {/* Category */}
+                 <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                    <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}
+                            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+
+                 {/* Condition */}
+                 <div>
+                    <label htmlFor="condition" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condition</label>
+                    <select id="condition" value={condition} onChange={(e) => setCondition(e.target.value)}
+                            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                         {CONDITIONS.map(cond => <option key={cond} value={cond}>{cond}</option>)}
+                    </select>
+                </div>
+
+                 {/* Image URL (Optional) */}
+                 <div>
+                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image URL (Optional)</label>
+                    <input type="url" id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg"
+                           className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Provide a direct link to an image (e.g., Imgur, Google Photos link).</p>
+                </div>
+
+                {/* Submit Button */}
+                <button type="submit" disabled={loading}
+                        className={`w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                            loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
+                        }`}
+                >
+                    {loading ? 'Submitting...' : 'List Item'}
+                </button>
+            </form>
         </div>
     );
 }
 
-export default MarketplaceItemDetail;
+export default CreateMarketplaceItem;
