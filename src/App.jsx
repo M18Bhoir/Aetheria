@@ -1,29 +1,21 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Outlet, Navigate } from 'react-router-dom';
 
-// --- Page & Component Imports ---
 import LandingPage from './LandingPage/LandingPage';
 import Login from './LoginSignUp/Login';
 import Signup from './LoginSignUp/SignUp';
-import AdminDashboard from './Dashboard/Dashboard'; // Assuming this is for Admin
-import UserDashboard from './UserDashBoard/User_Dashboard'; // User's main dashboard view
+import AdminDashboard from './Dashboard/Dashboard'; 
+import UserDashboard from './UserDashBoard/User_Dashboard'; 
 import Profile from './Profile/Profile';
 import { PollList, PollDetail } from './Voting_System/VotingSystem';
 import CreatePoll from './Voting_System/CreatePoll';
-// --- Import Booking Components ---
 import AmenityBooking from './Booking/AmenityBooking';
-// --- CORRECTED: Import name matches RENAMED filename ---
-import MyBookings from './Booking/MyBooking';
-// --- Import Marketplace Components ---
+import MyBookings from './Booking/MyBookings';
 import MarketplaceList from './Marketplace/MarketplaceList';
-// --- CORRECTED: Imports match RENAMED filenames ---
-import MarketplaceItemDetail from './Marketplace/MarketplaceItem';
-import CreateMarketplaceItem from './Marketplace/MarketplaceItemform';
-import MyListings from './Marketplace/MyListingView';
-
-// --- Layout Component Imports ---
+import MarketplaceItemDetail from './Marketplace/MarketplaceItemDetail';
+import CreateMarketplaceItem from './Marketplace/MarketplaceList';
+import MyListings from './Marketplace/MyListings';
 import Sidebar from './Components/Sidebar';
-// import NoticeBoard from './Components/NoticeBoard'; // Keep commented if not used
 
 import './index.css';
 
@@ -107,4 +99,3 @@ function App() {
 }
 
 export default App;
-

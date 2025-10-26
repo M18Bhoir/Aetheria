@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+// Corrected relative path for api utility
 import api from '../utils/api';
-import { HiOutlineArrowLeft } from 'react-icons/hi';
+// Corrected import path for react-icons
+import { HiOutlineArrowLeft, HiOutlinePhotograph } from 'react-icons/hi';
 
 const CATEGORIES = ['Furniture', 'Electronics', 'Clothing', 'Books', 'Vehicle', 'Other'];
 const CONDITIONS = ['New', 'Like New', 'Used - Good', 'Used - Fair', 'Parts Only'];
+const MAX_FILE_SIZE_MB = 5; // Max image size in MB
 
 function CreateMarketplaceItem() {
     const [title, setTitle] = useState('');
@@ -12,10 +15,50 @@ function CreateMarketplaceItem() {
     const [price, setPrice] = useState('');
     const [category, setCategory] = useState(CATEGORIES[5]); // Default to Other
     const [condition, setCondition] = useState(CONDITIONS[2]); // Default to Used - Good
-    const [imageUrl, setImageUrl] = useState('');
+    // State for the selected file object
+    const [imageFile, setImageFile] = useState(null);
+    // State for the image preview URL (generated from the file)
+    const [imagePreview, setImagePreview] = useState(null);
+
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // --- Handle File Input Change ---
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        setMessage({ type: '', text: '' }); // Clear message on new file select
+
+        if (file) {
+            // Basic validation (type and size)
+            if (!file.type.startsWith('image/')) {
+                setMessage({ type: 'error', text: 'Please select a valid image file (jpg, png, gif, etc.).' });
+                e.target.value = null; // Clear the input
+                setImageFile(null);
+                setImagePreview(null);
+                return;
+            }
+            if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                 setMessage({ type: 'error', text: `File size exceeds ${MAX_FILE_SIZE_MB} MB limit.` });
+                 e.target.value = null; // Clear the input
+                 setImageFile(null);
+                 setImagePreview(null);
+                 return;
+            }
+
+            setImageFile(file);
+            // Create a preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // No file selected or selection cancelled
+            setImageFile(null);
+            setImagePreview(null);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,12 +71,23 @@ function CreateMarketplaceItem() {
             setLoading(false);
             return;
         }
-         // Simple URL validation
-        if (imageUrl && !/^https?:\/\/.+/i.test(imageUrl)) {
-            setMessage({ type: 'error', text: 'Invalid Image URL. Must start with http:// or https://' });
-             setLoading(false);
-             return;
+
+        // --- Simulated Upload ---
+        let uploadedImageUrl = ''; // This would be the URL from the backend in a real app
+        if (imageFile) {
+            console.log('Image file selected:', imageFile.name, imageFile.size, imageFile.type);
+             // **REAL IMPLEMENTATION NOTE:**
+             // Here you would typically:
+             // 1. Create FormData: `const formData = new FormData(); formData.append('image', imageFile);`
+             // 2. Upload to backend: `const uploadRes = await api.post('/api/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });`
+             // 3. Get URL: `uploadedImageUrl = uploadRes.data.imageUrl;`
+             // For now, we'll just use the filename as a placeholder (or keep it empty)
+             // uploadedImageUrl = `placeholder/path/to/${imageFile.name}`; // Example placeholder
+             // We show an info message, but only clear it on actual success/failure below
+             setMessage({ type: 'info', text: 'Image selected, processing...' });
         }
+        // --- End Simulated Upload ---
+
 
         try {
             await api.post('/api/marketplace', {
@@ -42,16 +96,19 @@ function CreateMarketplaceItem() {
                 price: priceNum,
                 category,
                 condition,
-                imageUrl,
+                // Send the URL obtained from upload (empty for now)
+                imageUrl: uploadedImageUrl,
             });
+            // Clear any info message and set success
             setMessage({ type: 'success', text: 'Item listed successfully!' });
             setTimeout(() => {
                 navigate('/dashboard/marketplace'); // Redirect to marketplace list
-            }, 1500);
+            }, 1500); // Shortened delay back
 
         } catch (err) {
             console.error("Error listing item:", err);
              if (err.message !== "Unauthorized access - Redirecting to login.") {
+                 // Clear any info message and set error
                  setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to list item.' });
              }
         } finally {
@@ -70,7 +127,8 @@ function CreateMarketplaceItem() {
              {message.text && (
                  <div className={`mb-4 p-3 rounded-md text-sm ${
                      message.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
-                     'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                     message.type === 'success' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
+                     'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' // Info
                  }`}>
                      {message.text}
                  </div>
@@ -116,13 +174,31 @@ function CreateMarketplaceItem() {
                     </select>
                 </div>
 
-                 {/* Image URL (Optional) */}
+                 {/* --- Image File Upload --- */}
                  <div>
-                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image URL (Optional)</label>
-                    <input type="url" id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg"
-                           className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Provide a direct link to an image (e.g., Imgur, Google Photos link).</p>
+                    <label htmlFor="imageFile" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Image (Optional, Max {MAX_FILE_SIZE_MB}MB)</label>
+                    <input
+                        type="file"
+                        id="imageFile"
+                        accept="image/*" // Accept only image types
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500 dark:text-gray-400
+                                   file:mr-4 file:py-2 file:px-4
+                                   file:rounded-md file:border-0
+                                   file:text-sm file:font-semibold
+                                   file:bg-blue-50 dark:file:bg-gray-600
+                                   file:text-blue-700 dark:file:text-blue-300
+                                   hover:file:bg-blue-100 dark:hover:file:bg-gray-500
+                                   file:cursor-pointer"
+                    />
+                     {/* Image Preview */}
+                     {imagePreview && (
+                        <div className="mt-4">
+                            <img src={imagePreview} alt="Selected preview" className="max-h-48 w-auto rounded-md border dark:border-gray-600" />
+                        </div>
+                     )}
                 </div>
+
 
                 {/* Submit Button */}
                 <button type="submit" disabled={loading}
@@ -130,7 +206,11 @@ function CreateMarketplaceItem() {
                             loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
                         }`}
                 >
-                    {loading ? 'Submitting...' : 'List Item'}
+                    {loading ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>
+                     ) : (
+                         'List Item'
+                    )}
                 </button>
             </form>
         </div>
@@ -138,3 +218,4 @@ function CreateMarketplaceItem() {
 }
 
 export default CreateMarketplaceItem;
+

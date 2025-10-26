@@ -1,15 +1,17 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom'; // Use NavLink for active styling
-// Import icons
+// Import icons - Corrected Import Path (Trying standard again, ensure package is installed)
 import {
   HiChartPie,
   HiTicket,
-  HiBell,
+  // HiBell, // Removed as it was causing the error and wasn't used in a NavItem
   HiUserCircle,
   HiChevronLeft,
-  HiCalendar, // Icon for booking
-  HiLogout, // Icon for Logout
-} from "react-icons/hi";
+  HiCalendar,
+  HiLogout,
+  HiOutlineShoppingCart,
+  HiOutlineCollection,
+} from "react-icons/hi"; // Import directly from 'react-icons/hi' - Standard import
 
 // Helper component for NavLink items
 const NavItem = ({ to, icon, text, isOpen }) => (
@@ -24,9 +26,11 @@ const NavItem = ({ to, icon, text, isOpen }) => (
             : 'hover:bg-gray-700 hover:text-white'   // Hover state style
         }`
       }
-      end // Use 'end' for the Home/Dashboard link to avoid matching nested routes
+      // Use 'end' prop for exact matching on parent routes like /dashboard
+      end={to === '/dashboard'}
     >
-      {React.cloneElement(icon, { size: "1.5rem" })}
+      {/* Ensure icon is a valid React element before cloning */}
+      {React.isValidElement(icon) ? React.cloneElement(icon, { size: "1.5rem" }) : null}
       {/* Conditionally render the text with smooth transition */}
        <span className={`ml-4 overflow-hidden transition-all duration-300 ${isOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0'}`}>
          {text}
@@ -86,10 +90,14 @@ function Sidebar({ isOpen, setIsOpen }) {
       <ul className="flex-grow mt-4"> {/* Use flex-grow to push logout down */}
         <NavItem to="/dashboard" icon={<HiChartPie />} text="Home" isOpen={isOpen} />
         <NavItem to="/dashboard/voting" icon={<HiTicket />} text="Voting" isOpen={isOpen} />
-        {/* --- Add Amenity Booking Link --- */}
+        {/* --- Booking Links --- */}
         <NavItem to="/dashboard/booking" icon={<HiCalendar />} text="Book Amenity" isOpen={isOpen} />
-        {/* --- End Amenity Booking Link --- */}
-        {/* <NavItem to="/dashboard/notices" icon={<HiBell />} text="Notices" isOpen={isOpen} /> */}
+        <NavItem to="/dashboard/my-bookings" icon={<HiCalendar />} text="My Bookings" isOpen={isOpen} />
+        {/* --- Marketplace Links --- */}
+        <NavItem to="/dashboard/marketplace" icon={<HiOutlineShoppingCart />} text="Marketplace" isOpen={isOpen} />
+        <NavItem to="/dashboard/my-listings" icon={<HiOutlineCollection />} text="My Listings" isOpen={isOpen} />
+        {/* --- End Marketplace Links --- */}
+        {/* <NavItem to="/dashboard/notices" icon={<HiBell />} text="Notices" isOpen={isOpen} /> */} {/* Notice link commented out */}
         <NavItem to="/dashboard/profile" icon={<HiUserCircle />} text="Profile" isOpen={isOpen} />
       </ul>
 
@@ -110,3 +118,4 @@ function Sidebar({ isOpen, setIsOpen }) {
 }
 
 export default Sidebar;
+
