@@ -16,7 +16,8 @@ import {
   ArrowLeft,
   BarChart as BarChartIcon, 
   PieChart as PieChartIcon,
-  CalendarCheck // <-- 1. IMPORT NEW ICON
+  CalendarCheck,
+  Key // --- 1. IMPORT NEW ICON ---
 } from "lucide-react";
 import { 
   BarChart, 
@@ -33,6 +34,9 @@ import {
 } from 'recharts'; 
 import { useNavigate } from "react-router-dom"; 
 import api from "../utils/api"; 
+import Calendar from 'react-calendar'; // Import Calendar
+// --- Make sure you have installed react-calendar ---
+// --- and imported its CSS in src/index.css ---
 
 // ----------------- Sidebar -----------------
 const Sidebar = ({ currentView, setView }) => {
@@ -50,7 +54,9 @@ const Sidebar = ({ currentView, setView }) => {
     { name: "Dashboard", icon: <Home size={20} />, view: "dashboard" },
     { name: "Residents", icon: <Users size={20} />, view: "residents" },
     { name: "Create Dues", icon: <DollarSign size={20} />, view: "create_dues" },
-    { name: "Manage Bookings", icon: <CalendarCheck size={20} />, view: "manage_bookings" }, // <-- 2. ADD TO MENU
+    { name: "Manage Bookings", icon: <CalendarCheck size={20} />, view: "manage_bookings" },
+    // --- 2. ADD GUEST PASSES TO MENU ---
+    { name: "Guest Passes", icon: <Key size={20} />, view: "guest_passes" },
     { name: "Complaints", icon: <ClipboardList size={20} />, view: "complaints" },
     { name: "Maintenance", icon: <Wrench size={20} />, view: "maintenance" },
     { name: "Notices", icon: <Bell size={20} />, view: "notices" },
@@ -76,6 +82,7 @@ const Sidebar = ({ currentView, setView }) => {
   };
 
   return (
+    // ... (Sidebar JSX is unchanged) ...
     <aside
       className={`${isOpen ? "w-64" : "w-20"}
         bg-gray-900 dark:bg-slate-900 text-gray-200 shadow-lg 
@@ -110,11 +117,11 @@ const Sidebar = ({ currentView, setView }) => {
 };
 
 // ----------------- (All other components remain the same) -----------------
-// StatsCards, ActivityFeed, DuesBarChart, ComplaintsPieChart,
-// MaintenanceSummary, Notices, ComplaintTracker, VisitorLogs, DashboardHome, CreateDues
-// ... (Paste all those components here without any changes) ...
+// ... (StatsCards, ActivityFeed, DuesBarChart, ComplaintsPieChart) ...
+// ... (MaintenanceSummary, Notices, ComplaintTracker, VisitorLogs) ...
+// ... (ImportantDates, DashboardHome, CreateDues, ResidentList, ManageBookings) ...
+// --- (Your other components) ---
 // ----------------- StatsCards -----------------
-// (No changes to this component)
 const StatsCards = ({ stats }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -139,9 +146,7 @@ const StatsCards = ({ stats }) => {
     </div>
   );
 };
-
 // ----------------- ActivityFeed -----------------
-// (No changes to this component)
 const icons = { Bell, Users, Wrench };
 const ActivityFeed = ({ activities }) => {
   return (
@@ -172,9 +177,7 @@ const ActivityFeed = ({ activities }) => {
     </div>
   );
 };
-
 // ----------------- DuesBarChart Component -----------------
-// (No changes to this component)
 const DuesBarChart = ({ summary }) => {
   const collectedNum = parseFloat(summary.collected.replace('₹', '').replace(',', ''));
   const pendingNum = parseFloat(summary.pending.replace('₹', '').replace(',', ''));
@@ -208,9 +211,7 @@ const DuesBarChart = ({ summary }) => {
     </div>
   );
 };
-
 // ----------------- ComplaintsPieChart Component -----------------
-// (No changes to this component)
 const ComplaintsPieChart = ({ complaints }) => {
   const pending = complaints.filter(c => c.status === 'Pending').length;
   const resolved = complaints.filter(c => c.status === 'Resolved').length;
@@ -251,10 +252,7 @@ const ComplaintsPieChart = ({ complaints }) => {
     </div>
   );
 };
-
-
 // ----------------- MaintenanceSummary -----------------
-// (No changes to this component)
 const MaintenanceSummary = ({ summary }) => {
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
@@ -272,9 +270,7 @@ const MaintenanceSummary = ({ summary }) => {
     </div>
   );
 };
-
 // ----------------- Notices -----------------
-// (No changes to this component)
 const Notices = ({ notices }) => {
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
@@ -289,9 +285,7 @@ const Notices = ({ notices }) => {
     </div>
   );
 };
-
 // ----------------- ComplaintTracker -----------------
-// (No changes to this component)
 const ComplaintTracker = ({ complaints }) => {
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
@@ -328,9 +322,7 @@ const ComplaintTracker = ({ complaints }) => {
     </div>
   );
 };
-
 // ----------------- VisitorLogs -----------------
-// (No changes to this component)
 const VisitorLogs = ({ visitors }) => {
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
@@ -349,9 +341,44 @@ const VisitorLogs = ({ visitors }) => {
     </div>
   );
 };
+// ----------------- ImportantDates -----------------
+const ImportantDates = () => {
+  const [date, setDate] = useState(new Date());
 
+  // In a real app, you'd fetch this or pass it as a prop
+  const importantDates = [
+    new Date(2025, 10, 10), // Example: Nov 10
+    new Date(2025, 10, 25), // Example: Nov 25
+  ];
+
+  const tileClassName = ({ date, view }) => {
+    if (view === 'month' && importantDates.find(dDate => dDate.toDateString() === date.toDateString())) {
+      return 'bg-red-200 dark:bg-red-800 rounded-full';
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+      <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Important Dates</h3>
+      <div className="flex justify-center">
+        <Calendar
+          onChange={setDate}
+          value={date}
+          tileClassName={tileClassName}
+          className="text-gray-900 dark:text-white"
+        />
+      </div>
+       <div className="mt-4">
+         <h4 className="font-semibold text-gray-700 dark:text-gray-300">Upcoming Events:</h4>
+         <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 mt-2">
+           <li>Nov 10: Annual General Meeting</li>
+           <li>Nov 25: Maintenance Due Date</li>
+         </ul>
+       </div>
+    </div>
+  );
+};
 // ----------------- Dashboard Home View -----------------
-// (No changes to this component)
 const DashboardHome = () => {
   const stats = [
     { title: "Residents", value: "120", icon: <Users size={24} />, iconBg: "bg-blue-100 dark:bg-blue-900", iconColor: "text-blue-600 dark:text-blue-400" },
@@ -390,7 +417,7 @@ const DashboardHome = () => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <ActivityFeed activities={activities} />
-        <MaintenanceSummary summary={summary} />
+        <ImportantDates />
         <Notices notices={notices} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -400,9 +427,7 @@ const DashboardHome = () => {
     </>
   );
 }
-
 // ----------------- Create Dues View -----------------
-// (No changes to this component)
 const CreateDues = ({ setView }) => {
   const [userId, setUserId] = useState('');
   const [amount, setAmount] = useState('');
@@ -524,9 +549,7 @@ const CreateDues = ({ setView }) => {
     </div>
   );
 };
-
 // ----------------- ResidentList Component -----------------
-// (No changes to this component)
 const ResidentList = ({ setView }) => {
   const [residents, setResidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -593,8 +616,7 @@ const ResidentList = ({ setView }) => {
     </div>
   );
 };
-
-// ----------------- 3. CREATE NEW COMPONENT: ManageBookings -----------------
+// ----------------- ManageBookings Component -----------------
 const ManageBookings = ({ setView }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -721,8 +743,207 @@ const ManageBookings = ({ setView }) => {
 };
 
 
+// --- 3. CREATE NEW COMPONENT: ManageGuestPasses ---
+const ManageGuestPasses = ({ setView }) => {
+  // State for the list of passes
+  const [passes, setPasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // State for the creation form
+  const [residentUserId, setResidentUserId] = useState('');
+  const [guestName, setGuestName] = useState('');
+  const [visitDate, setVisitDate] = useState('');
+  const [reason, setReason] = useState('');
+  
+  const [formMessage, setFormMessage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch all passes
+  const fetchPasses = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.get('/api/admin/guestpass');
+      setPasses(res.data);
+    } catch (err) {
+      console.error("Error fetching guest passes:", err);
+      setError(err.response?.data?.msg || "Failed to fetch guest passes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPasses();
+  }, []);
+
+  // Handle form submit to create a new pass
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setFormMessage(null);
+    try {
+      const res = await api.post('/api/admin/guestpass', {
+        residentUserId,
+        guestName,
+        visitDate,
+        reason
+      });
+      setFormMessage({ type: 'success', text: `Pass created! Code: ${res.data.code}` });
+      // Clear form
+      setResidentUserId('');
+      setGuestName('');
+      setVisitDate('');
+      setReason('');
+      // Add new pass to the top of the list
+      setPasses([res.data, ...passes]);
+    } catch (err) {
+      console.error("Error creating pass:", err);
+      setFormMessage({ type: 'error', text: err.response?.data?.msg || 'Failed to create pass.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle revoking a pass
+  const handleRevoke = async (passId) => {
+    if (!window.confirm('Are you sure you want to revoke this pass?')) return;
+    try {
+      const res = await api.patch(`/api/admin/guestpass/${passId}/revoke`);
+      // Update the pass in the list
+      setPasses(passes.map(p => p._id === passId ? res.data : p));
+      alert('Pass revoked.');
+    } catch (err) {
+      console.error("Error revoking pass:", err);
+      alert('Failed to revoke pass.');
+    }
+  };
+  
+  // Helper for status colors
+  const getStatusColor = (status) => {
+      switch (status) {
+          case 'Active': return 'text-green-600 dark:text-green-400';
+          case 'Expired': return 'text-gray-500 dark:text-gray-400';
+          case 'Revoked': return 'text-red-600 dark:text-red-400';
+          default: return 'text-gray-700 dark:text-gray-300';
+      }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* --- Column 1: Create Pass Form --- */}
+      <div className="lg:col-span-1">
+         <button 
+            onClick={() => setView('dashboard')} 
+            className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline mb-4">
+            <ArrowLeft size={16} className="mr-1" />
+            Back to Dashboard
+          </button>
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Create Guest Pass</h2>
+          {formMessage && (
+            <div className={`p-3 rounded-md mb-4 text-sm ${
+              formMessage.type === 'error' 
+              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' 
+              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+            }`}>
+              {formMessage.text}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="residentUserId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Resident User ID (e.g., A-101) *
+              </label>
+              <input type="text" id="residentUserId" value={residentUserId} onChange={(e) => setResidentUserId(e.target.value)} required
+                className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="A-101" />
+            </div>
+             <div>
+              <label htmlFor="guestName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Guest Name *
+              </label>
+              <input type="text" id="guestName" value={guestName} onChange={(e) => setGuestName(e.target.value)} required
+                className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="John Doe" />
+            </div>
+            <div>
+              <label htmlFor="visitDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Visit Date *
+              </label>
+              <input type="date" id="visitDate" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} required
+                className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Reason (Optional)
+              </label>
+              <input type="text" id="reason" value={reason} onChange={(e) => setReason(e.target.value)}
+                className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Delivery, Relative" />
+            </div>
+            <button type="submit" disabled={isSubmitting}
+              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
+                ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} 
+                focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-blue-500`}>
+              {isSubmitting ? 'Creating...' : 'Create Pass'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* --- Column 2: Pass List --- */}
+      <div className="lg:col-span-2">
+         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 invisible hidden lg:block">Generated Passes</h2>
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Generated Passes</h2>
+          {loading && <p className="text-gray-500 dark:text-gray-400">Loading passes...</p>}
+          {error && <p className="text-red-500 dark:text-red-300">{error}</p>}
+          {!loading && !error && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b dark:border-slate-700">
+                  <tr className="text-left text-slate-500 dark:text-slate-400">
+                    <th className="pb-3 p-2">Guest</th>
+                    <th className="pb-3 p-2">Code</th>
+                    <th className="pb-3 p-2">Resident (Flat)</th>
+                    <th className="pb-3 p-2">Visit Date</th>
+                    <th className="pb-3 p-2">Status</th>
+                    <th className="pb-3 p-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {passes.map((pass) => (
+                    <tr key={pass._id} className="border-t border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
+                      <td className="py-3 p-2 font-medium text-gray-800 dark:text-gray-200">{pass.guestName}</td>
+                      <td className="py-3 p-2 font-mono text-blue-600 dark:text-blue-400">{pass.code}</td>
+                      <td className="py-3 p-2 text-gray-600 dark:text-gray-300">{pass.resident?.name} ({pass.resident?.userId})</td>
+                      <td className="py-3 p-2 text-gray-600 dark:text-gray-300">{new Date(pass.visitDate).toLocaleDateString()}</td>
+                      <td className={`py-3 p-2 font-medium ${getStatusColor(pass.status)}`}>{pass.status}</td>
+                      <td className="py-3 p-2">
+                        {pass.status === 'Active' && (
+                          <button onClick={() => handleRevoke(pass._id)}
+                            className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                            disabled={isSubmitting}>
+                            Revoke
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // ----------------- Main AdminDashboard Component -----------------
-// (This component is updated to render the new ManageBookings view)
 const AdminDashboard = () => {
   const [view, setView] = useState("dashboard"); // 'dashboard', 'create_dues', etc.
 
@@ -733,13 +954,17 @@ const AdminDashboard = () => {
         {view === "dashboard" && <DashboardHome />}
         {view === "create_dues" && <CreateDues setView={setView} />}
         {view === "residents" && <ResidentList setView={setView} />}
-        {view === "manage_bookings" && <ManageBookings setView={setView} />} {/* <-- 4. ADD VIEW RENDER */}
+        {view === "manage_bookings" && <ManageBookings setView={setView} />}
+        {/* --- 4. ADD NEW VIEW RENDER --- */}
+        {view === "guest_passes" && <ManageGuestPasses setView={setView} />}
         
         {/* Updated catch-all for "coming soon" pages */}
         {view !== "dashboard" && 
          view !== "create_dues" && 
          view !== "residents" &&
-         view !== "manage_bookings" && (
+         view !== "manage_bookings" &&
+         view !== "guest_passes" && // --- 5. ADD TO EXCLUSION LIST ---
+         (
             <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg">
                 <h2 className="text-2xl font-bold mb-4">{view.replace('_', ' ')}</h2>
                 <p>This feature is coming soon.</p>

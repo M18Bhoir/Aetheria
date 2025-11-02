@@ -7,11 +7,13 @@ import connectDB from './config/db.js'; // ✅ Correct
 
 // --- Import ALL necessary routes ---
 import authRoutes from './routes/authRoutes.js';   // ✅ Correct
-import adminRoutes from './routes/adminRoutes.js'; // ✅ Correct (assuming file exists)
-import pollRoutes from './routes/pollRoutes.js';   // ✅ Correct (assuming file exists)
-import userRoutes from './routes/userRoutes.js';   // ✅ Correct (assuming file exists)
-import bookingRoutes from './routes/bookingRoutes.js'; // <-- ADDED import
-import marketplaceRoutes from './routes/marketplaceRoutes.js'; // <-- ADDED import
+import adminRoutes from './routes/adminRoutes.js'; // ✅ Correct
+import pollRoutes from './routes/pollRoutes.js';   // ✅ Correct
+import userRoutes from './routes/userRoutes.js';   // ✅ Correct
+import bookingRoutes from './routes/bookingRoutes.js'; // ✅ Correct
+import marketplaceRoutes from './routes/marketplaceRoutes.js'; // ✅ Correct
+// --- 1. IMPORT NEW GUEST PASS ROUTE ---
+import guestPassRoutes from './routes/guestPassRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,11 +35,14 @@ app.use(express.urlencoded({ extended: true }));
 // --- API Routes ---
 // Mount ALL imported routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes); // Make sure adminRoutes.js exists if uncommented
-app.use('/api/polls', pollRoutes); // Make sure pollRoutes.js exists if uncommented
-app.use('/api/user', userRoutes); // Make sure userRoutes.js exists if uncommented
-app.use('/api/bookings', bookingRoutes); // <-- ADDED use
-app.use('/api/marketplace', marketplaceRoutes); // <-- ADDED use
+app.use('/api/admin', adminRoutes); 
+app.use('/api/polls', pollRoutes); 
+app.use('/api/user', userRoutes); 
+app.use('/api/bookings', bookingRoutes); 
+app.use('/api/marketplace', marketplaceRoutes); 
+// --- 2. MOUNT NEW GUEST PASS ROUTE ---
+app.use('/api/guestpass', guestPassRoutes);
+
 
 // Test Route (optional)
 app.get('/api/test', (req, res) => res.json({ msg: 'Backend working!' }));

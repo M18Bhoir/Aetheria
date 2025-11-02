@@ -122,7 +122,8 @@ export function PollDetail() {
     setVoteMessage(null);
 
     try {
-      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex }); // Use /api prefix
+      // This part was already correct: POSTing with optionIndex
+      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex }); //
       setVoteMessage({ type: 'success', text: 'Your vote has been recorded!' });
       await fetchPoll(); // Refresh poll data
     } catch (err) {

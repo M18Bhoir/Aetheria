@@ -29,11 +29,11 @@ router.get('/dues', protect, async (req, res) => {
     .sort({ dueDate: 1 }); // Sort by dueDate ascending to get the *next* one due
 
     if (!latestDue) {
-      // If no pending dues, return a "Paid" status
+      // --- UPDATED: Return a 'Paid' status with 0 amount ---
       return res.json({ 
         dues: { 
-          amount: 1000, 
-          status: 'Pending', 
+          amount: 0, 
+          status: 'Paid', 
           dueDate: null 
         } 
       });

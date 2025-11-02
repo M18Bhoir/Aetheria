@@ -13,13 +13,17 @@ import AmenityBooking from './Booking/AmenityBooking';
 import MyBookings from './Booking/MyBookings';
 import MarketplaceList from './Marketplace/MarketplaceList';
 import MarketplaceItemDetail from './Marketplace/MarketplaceItemDetail';
-import CreateMarketplaceItem from './Marketplace/MarketplaceItem'; // Corrected import path
+import CreateMarketplaceItem from './Marketplace/MarketplaceItem'; 
 import MyListings from './Marketplace/MyListings';
 import Sidebar from './Components/Sidebar';
+import RequestGuestPass from './Booking/RequestGuestPass';
+import MyGuestPasses from './Booking/MyGuestPasses';
+
 
 import './index.css';
 
 // --- User Layout Component ---
+// ... (UserLayout function is unchanged) ...
 function UserLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -43,6 +47,7 @@ function UserLayout() {
 }
 
 // --- Protected Route Component (Simplified and Enforced) ---
+// ... (ProtectedRoute function is unchanged) ...
 function ProtectedRoute() {
   const token = localStorage.getItem('token');
   const isAdmin = localStorage.getItem('admin');
@@ -74,7 +79,7 @@ function ProtectedRoute() {
 // --- Main App Component ---
 function App() {
   return (
-    <Router>
+  
       <Routes>
         {/* === Public Routes === */}
         <Route path="/" element={<LandingPage />} />
@@ -85,7 +90,6 @@ function App() {
         <Route element={<ProtectedRoute />}>
 
           {/* --- User Dashboard Layout & Routes --- */}
-          {/* Admin attempts to access any of these paths will be caught by ProtectedRoute */}
           <Route path="/dashboard" element={<UserLayout />}>
             <Route index element={<UserDashboard />} />
             <Route path="profile" element={<Profile />} />
@@ -96,6 +100,9 @@ function App() {
             {/* Booking */}
             <Route path="booking" element={<AmenityBooking />} />
             <Route path="my-bookings" element={<MyBookings />} />
+            {/* --- 2. ADD NEW GUEST PASS ROUTES --- */}
+            <Route path="request-guest-pass" element={<RequestGuestPass />} />
+            <Route path="my-guest-passes" element={<MyGuestPasses />} />
             {/* Marketplace */}
             <Route path="marketplace" element={<MarketplaceList />} />
             <Route path="marketplace/new" element={<CreateMarketplaceItem />} />
@@ -123,7 +130,7 @@ function App() {
           }
         />
       </Routes>
-    </Router>
+    
   );
 }
 

@@ -1,17 +1,18 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom'; // Use NavLink for active styling
-// Import icons - Corrected Import Path (Trying standard again, ensure package is installed)
+// Import icons
 import {
   HiChartPie,
   HiTicket,
-  // HiBell, // Removed as it was causing the error and wasn't used in a NavItem
   HiUserCircle,
   HiChevronLeft,
   HiCalendar,
   HiLogout,
   HiOutlineShoppingCart,
   HiOutlineCollection,
-} from "react-icons/hi"; // Import directly from 'react-icons/hi' - Standard import
+  // --- 1. IMPORT NEW ICON ---
+  HiOutlineIdentification 
+} from "react-icons/hi"; 
 
 // Helper component for NavLink items
 const NavItem = ({ to, icon, text, isOpen }) => (
@@ -93,11 +94,13 @@ function Sidebar({ isOpen, setIsOpen }) {
         {/* --- Booking Links --- */}
         <NavItem to="/dashboard/booking" icon={<HiCalendar />} text="Book Amenity" isOpen={isOpen} />
         <NavItem to="/dashboard/my-bookings" icon={<HiCalendar />} text="My Bookings" isOpen={isOpen} />
+        {/* --- 2. ADD GUEST PASS LINKS --- */}
+        <NavItem to="/dashboard/request-guest-pass" icon={<HiOutlineIdentification />} text="Request Guest Pass" isOpen={isOpen} />
+        <NavItem to="/dashboard/my-guest-passes" icon={<HiOutlineIdentification />} text="My Guest Passes" isOpen={isOpen} />
         {/* --- Marketplace Links --- */}
         <NavItem to="/dashboard/marketplace" icon={<HiOutlineShoppingCart />} text="Marketplace" isOpen={isOpen} />
         <NavItem to="/dashboard/my-listings" icon={<HiOutlineCollection />} text="My Listings" isOpen={isOpen} />
         {/* --- End Marketplace Links --- */}
-        {/* <NavItem to="/dashboard/notices" icon={<HiBell />} text="Notices" isOpen={isOpen} /> */} {/* Notice link commented out */}
         <NavItem to="/dashboard/profile" icon={<HiUserCircle />} text="Profile" isOpen={isOpen} />
       </ul>
 
@@ -118,4 +121,3 @@ function Sidebar({ isOpen, setIsOpen }) {
 }
 
 export default Sidebar;
-

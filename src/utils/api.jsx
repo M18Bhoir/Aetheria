@@ -6,9 +6,9 @@ const token = localStorage.getItem('token');
 // Create a new Axios instance
 const api = axios.create({
   // --- IMPORTANT ---
-  // Set your backend's base URL here
-  // This is the URL your server.js is running on
-  baseURL: 'http://localhost:5000',
+  // The baseURL is REMOVED.
+  // This allows the Vite proxy (in vite.config.js) to handle requests.
+  baseURL: 'http://localhost:5000', // <-- DELETE THIS LINE
   headers: {
     'Content-Type': 'application/json'
   }

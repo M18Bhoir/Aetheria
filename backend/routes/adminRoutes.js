@@ -2,15 +2,16 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import Admin from '../models/Admin.js';
-import User from '../models/User.js';   // <-- Already imported
-import Dues from '../models/Dues.js';   // <-- Already imported
-import adminAuth from '../middleware/adminAuth.js'; // <-- Already imported
+import User from '../models/User.js';   
+import Dues from '../models/Dues.js';   
+import adminAuth from '../middleware/adminAuth.js'; 
+// --- 1. IMPORT THE NEW GUESTPASS MODEL ---
+import GuestPass from '../models/GuestPass.js';
 
 const router = express.Router();
 
 // @route   POST api/admin/login
-// @desc    Authenticate admin & get token
-// @access  Public
+// ... (existing login route code) ...
 router.post('/login', async (req, res) => {
     
     // --- USING DYNAMIC CREDENTIALS ---
@@ -66,8 +67,7 @@ router.post('/login', async (req, res) => {
 
 
 // @route   POST api/admin/dues
-// @desc    Create a new due for a user
-// @access  Private (Admin Only)
+// ... (existing dues route code) ...
 router.post('/dues', adminAuth, async (req, res) => {
   const { userId, amount, dueDate, type, notes } = req.body;
 
@@ -102,11 +102,8 @@ router.post('/dues', adminAuth, async (req, res) => {
 });
 
 
-// -----------------------------------------------------------------
-// --- ADD THIS NEW ROUTE ---
 // @route   GET api/admin/residents
-// @desc    Get all residents (users)
-// @access  Private (Admin Only)
+// ... (existing residents route code) ...
 router.get('/residents', adminAuth, async (req, res) => {
   try {
     // Find all users and exclude their password
@@ -117,8 +114,92 @@ router.get('/residents', adminAuth, async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 });
-// --- END OF NEW ROUTE ---
+
 // -----------------------------------------------------------------
+// --- 2. ADD NEW GUEST PASS ROUTES ---
+// -----------------------------------------------------------------
+
+// @route   POST api/admin/guestpass
+// @desc    Admin creates a new guest pass
+// @access  Private (Admin Only)
+router.post('/guestpass', adminAuth, async (req, res) => {
+  const { residentUserId, guestName, visitDate, reason } = req.body;
+  
+  if (!residentUserId || !guestName || !visitDate) {
+    return res.status(400).json({ msg: 'Resident User ID, Guest Name, and Visit Date are required.' });
+  }
+
+  try {
+    // Find the resident by their User ID (e.g., "A-101")
+    const resident = await User.findOne({ userId: residentUserId });
+    if (!resident) {
+      return res.status(404).json({ msg: `Resident with User ID '${residentUserId}' not found.` });
+    }
+
+    // Generate a simple unique code
+    const code = `GP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const newPass = new GuestPass({
+      resident: resident._id,
+      guestName,
+      visitDate: new Date(visitDate),
+      reason,
+      code,
+      status: 'Active',
+      createdBy: req.admin.id // From adminAuth middleware
+    });
+
+    await newPass.save();
+    
+    // Populate resident info before sending back
+    const pass = await GuestPass.findById(newPass._id).populate('resident', 'name userId');
+    res.status(201).json(pass);
+
+  } catch (err) {
+    console.error('Error creating guest pass:', err.message);
+    if (err.code === 11000) { // Handle duplicate code error
+        return res.status(400).json({ msg: 'Code generation conflict. Please try again.' });
+    }
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+// @route   GET api/admin/guestpass
+// @desc    Admin gets all guest passes (e.g., active and recent)
+// @access  Private (Admin Only)
+router.get('/guestpass', adminAuth, async (req, res) => {
+    try {
+        // Find all passes, populate resident info, sort by most recent visit date
+        const passes = await GuestPass.find()
+            .populate('resident', 'name userId')
+            .sort({ visitDate: -1 }); // Show upcoming/recent first
+        res.json(passes);
+    } catch (err) {
+        console.error('Error fetching guest passes:', err.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+// @route   PATCH api/admin/guestpass/:id/revoke
+// @desc    Admin revokes (cancels) an active guest pass
+// @access  Private (Admin Only)
+router.patch('/guestpass/:id/revoke', adminAuth, async (req, res) => {
+    try {
+        const pass = await GuestPass.findById(req.params.id);
+        if (!pass) {
+            return res.status(404).json({ msg: 'Guest pass not found' });
+        }
+
+        pass.status = 'Revoked';
+        await pass.save();
+        
+        const updatedPass = await GuestPass.findById(pass._id).populate('resident', 'name userId');
+        res.json(updatedPass);
+    } catch (err) {
+        console.error('Error revoking guest pass:', err.message);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
 
 
 export default router;

@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion"; 
-import building_icon from "/src/Assets/building.png";
-import frontendImage from "/src/Assets/frontend1.png";
+// --- UPDATED: Use relative paths ---
+import building_icon from "../Assets/building.png";
+import frontendImage from "../Assets/frontend1.png";
 
 // --- Animations ---
 const fadeIn = (delay = 0) => ({

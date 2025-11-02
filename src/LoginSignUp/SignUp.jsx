@@ -5,9 +5,13 @@ import api from "../utils/api";
 
 import user_icon from "../Assets/person.png";
 import password_icon from "../Assets/password.png";
+// --- UPDATED: Import the email icon ---
+import email_icon from "../Assets/email.png";
 
 const Signup = () => {
   const [name, setName] = useState("");
+  // --- UPDATED: Add email state ---
+  const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,9 +33,10 @@ const Signup = () => {
     setLoading(true); // Set loading state
 
     try {
-      // Use the configured api instance and correct path
+      // --- UPDATED: Send 'email' in the request body ---
       const res = await api.post("/api/auth/signup", {
         name,
+        email,
         userId,
         password,
       });
@@ -59,8 +64,6 @@ const Signup = () => {
     }
   };
 
-  // --- JSX remains largely the same ---
-  // Added message display area and loading state for button
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0f0f1e] w-full p-4"> {/* Added padding */}
       <h2 className="text-white mb-6 text-2xl font-bold">Create Account</h2>
@@ -100,13 +103,26 @@ const Signup = () => {
               className="h-[50px] w-full bg-transparent text-white text-lg placeholder:text-gray-400 outline-none"
             />
           </div>
+          
+          {/* --- UPDATED: Add Email Input Field --- */}
+          <div className="flex items-center mx-auto w-full h-[60px] bg-[#2e2e42] rounded-lg border border-[#444466] focus-within:border-[#ff6347] focus-within:shadow-[0_0_10px_rgba(255,99,71,0.4)] transition-colors duration-200">
+            <img src={email_icon} alt="Email icon" className="mx-4 h-5 w-5 invert" />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-[50px] w-full bg-transparent text-white text-lg placeholder:text-gray-400 outline-none"
+            />
+          </div>
 
           {/* User ID */}
           <div className="flex items-center mx-auto w-full h-[60px] bg-[#2e2e42] rounded-lg border border-[#444466] focus-within:border-[#ff6347] focus-within:shadow-[0_0_10px_rgba(255,99,71,0.4)] transition-colors duration-200">
             <img src={user_icon} alt="ID icon" className="mx-4 h-5 w-5 invert" />
             <input
               type="text"
-              placeholder="User ID"
+              placeholder="User ID (e.g., A-101)"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               required
@@ -119,7 +135,7 @@ const Signup = () => {
             <img src={password_icon} alt="Password icon" className="mx-4 h-5 w-5 invert" />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Password (min 6 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

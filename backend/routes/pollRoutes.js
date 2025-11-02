@@ -26,16 +26,32 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Vote on a poll
-router.put('/vote/:pollId', protect, async (req, res) => {
+// --- UPDATED SECTION ---
+
+// @route   POST /api/polls/:pollId/vote
+// @desc    Vote on a poll
+// @access  Private
+router.post('/vote/:pollId', protect, async (req, res) => {
   try {
     const poll = await Poll.findById(req.params.pollId);
-    if (!poll) return res.status(404).json({ msg: 'Poll not found' });
+    if (!poll) {
+      return res.status(404).json({ msg: 'Poll not found' });
+    }
 
-    const optionIndex = poll.options.findIndex(o => o.text === req.body.option);
-    if (optionIndex === -1) return res.status(400).json({ msg: 'Option not found' });
+    // Use optionIndex directly from the request body
+    const { optionIndex } = req.body;
 
+    // Validate the index
+    if (optionIndex === null || optionIndex < 0 || optionIndex >= poll.options.length) {
+      return res.status(400).json({ msg: 'Invalid option selected.' });
+    }
+    
+    // --- (Optional) Add logic to prevent double voting here if needed ---
+    // e.g., check if req.user._id is already in a 'votedBy' array.
+
+    // Increment the vote
     poll.options[optionIndex].votes += 1;
+    
     await poll.save();
     res.json(poll);
   } catch (err) {
@@ -43,5 +59,6 @@ router.put('/vote/:pollId', protect, async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 });
+// --- END OF UPDATED SECTION ---
 
 export default router;

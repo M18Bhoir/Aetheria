@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// Use the consistent API instance - Corrected Path
-import api from "/src/utils/api.jsx"; // Using absolute path from root
+// --- UPDATED: Use relative path ---
+import api from "../utils/api.jsx"; 
 
-// Assuming image imports are correct relative to this file - Corrected Paths
-import user_icon from "/src/Assets/person.png"; // Using absolute path from root
-import password_icon from "/src/Assets/password.png"; // Using absolute path from root
+// --- UPDATED: Use relative paths ---
+import user_icon from "../Assets/person.png"; 
+import password_icon from "../Assets/password.png"; 
 
 const Login = () => {
   // State for user ID, password, messages, and loading status
@@ -14,12 +14,10 @@ const Login = () => {
   const [message, setMessage] = useState(null); // For success/error messages
   const [loading, setLoading] = useState(false); // For loading indicator
 
-  // --- 1. ADD NEW STATE FOR LOGIN TYPE ---
   const [loginType, setLoginType] = useState("user"); // 'user' or 'admin'
 
   const navigate = useNavigate();
 
-  // --- 3. UPDATE HANDLELOGIN FUNCTION ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setMessage(null); 
@@ -35,7 +33,8 @@ const Login = () => {
       if (loginType === "admin") {
         // --- Admin Login Logic ---
         loginEndpoint = "/api/admin/login";
-        payload = { adminId: 'admin123', password: '123456' }; // Use 'adminId' as expected by backend
+        // --- Use state variables (Fixed) ---
+        payload = { adminId: userId, password: password }; 
         successRedirect = "/admin-dashboard";
         storageKey = "admin";
       } else {
