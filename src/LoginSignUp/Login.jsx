@@ -14,52 +14,73 @@ const Login = () => {
   const [message, setMessage] = useState(null); // For success/error messages
   const [loading, setLoading] = useState(false); // For loading indicator
 
+  // --- 1. ADD NEW STATE FOR LOGIN TYPE ---
+  const [loginType, setLoginType] = useState("user"); // 'user' or 'admin'
+
   const navigate = useNavigate();
 
-  // Function to handle form submission
+  // --- 3. UPDATE HANDLELOGIN FUNCTION ---
   const handleLogin = async (e) => {
     e.preventDefault();
-    setMessage(null); // Clear previous messages
-    setLoading(true); // Set loading state
+    setMessage(null); 
+    setLoading(true);
 
     try {
-      // Make POST request to the login endpoint
-      const res = await api.post("/api/auth/login", {
-        userId,
-        password,
-      });
+      let res;
+      let loginEndpoint = "";
+      let payload = {};
+      let successRedirect = "";
+      let storageKey = "";
 
-      // Check status code for success (usually 200 OK)
+      if (loginType === "admin") {
+        // --- Admin Login Logic ---
+        loginEndpoint = "/api/admin/login";
+        payload = { adminId: 'admin123', password: '123456' }; // Use 'adminId' as expected by backend
+        successRedirect = "/admin-dashboard";
+        storageKey = "admin";
+      } else {
+        // --- User Login Logic ---
+        loginEndpoint = "/api/auth/login";
+        payload = { userId, password };
+        successRedirect = "/dashboard";
+        storageKey = "user";
+      }
+
+      // Make the API call
+      res = await api.post(loginEndpoint, payload);
+
       if (res.status === 200 && res.data.token) {
-        // Store token and user data in localStorage
+        // Store token (same for both)
         localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user)); // Store user info
+        
+        // Store user or admin data
+        const dataToStore = (loginType === 'admin') ? res.data.admin : res.data.user;
+        localStorage.setItem(storageKey, JSON.stringify(dataToStore)); 
 
         setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
-        // Redirect to the user dashboard after a short delay
-        setTimeout(() => navigate("/dashboard"), 1000);
+        
+        // Redirect to the correct dashboard
+        setTimeout(() => navigate(successRedirect), 1000);
       } else {
-        // Handle cases where login might fail without throwing an error (less common)
         setMessage({ type: 'error', text: res.data.message || res.data.msg || "Login failed. Please try again." });
       }
     } catch (err) {
       console.error("Login error:", err);
       let errorMessage = "Error during login. Please try again.";
       if (err.response) {
-        // Use the specific error message from the backend if available
         errorMessage = err.response.data.message || err.response.data.msg || "Invalid credentials or server error.";
       } else if (err.request) {
-        // Handle network errors (no response received)
         errorMessage = "Network error. Could not connect to the server.";
       }
-      // Check if the error is an Axios cancellation error (ignore if so)
-      if (axios.isCancel(err)) {
-        console.log('Request canceled:', err.message);
-      } else {
-        setMessage({ type: 'error', text: errorMessage });
-      }
+      
+      // Clear all auth keys on failure
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('admin');
+
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
-      setLoading(false); // Reset loading state regardless of outcome
+      setLoading(false); 
     }
   };
 
@@ -90,12 +111,41 @@ const Login = () => {
             </div>
           )}
 
-          {/* User ID */}
+          {/* --- 2. ADD LOGIN TYPE TOGGLE --- */}
+          <div className="flex justify-center gap-2">
+            <button
+              type="button" 
+              onClick={() => setLoginType('user')}
+              className={`px-4 py-2 w-full rounded-md text-sm font-medium transition-colors ${
+                loginType === 'user'
+                  ? 'bg-gradient-to-r from-[#ff6347] to-[#ff9478] text-white shadow-lg'
+                  : 'bg-[#2e2e42] text-gray-400 hover:bg-[#444466]'
+              }`}
+            >
+              User
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType('admin')}
+              className={`px-4 py-2 w-full rounded-md text-sm font-medium transition-colors ${
+                loginType === 'admin'
+                  ? 'bg-gradient-to-r from-[#ff6347] to-[#ff9478] text-white shadow-lg'
+                  : 'bg-[#2e2e42] text-gray-400 hover:bg-[#444466]'
+              }`}
+            >
+              Admin
+            </button>
+          </div>
+          {/* --- END OF TOGGLE --- */}
+
+
+          {/* User ID / Admin ID */}
           <div className="flex items-center mx-auto w-full h-[60px] bg-[#2e2e42] rounded-lg border border-[#444466] focus-within:border-[#ff6347] focus-within:shadow-[0_0_10px_rgba(255,99,71,0.4)] transition-colors duration-200">
             <img src={user_icon} alt="User ID icon" className="mx-4 h-5 w-5 invert" />
             <input
               type="text"
-              placeholder="User ID"
+              // Dynamic placeholder based on loginType
+              placeholder={loginType === 'user' ? 'User ID' : 'Admin ID'} 
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               required
@@ -125,7 +175,6 @@ const Login = () => {
                 loading ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-[0_0_15px_rgba(255,99,71,0.6)] hover:-translate-y-0.5'
               }`}
             >
-              {/* Show loading spinner or text */}
               {loading ? (<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>) : ('Login')}
             </button>
           </div>
@@ -136,7 +185,7 @@ const Login = () => {
           Don't have an account?{" "}
           <span
             className="text-[#ff6347] cursor-pointer hover:underline"
-            onClick={() => navigate("/signup")} // Navigate to the signup page
+            onClick={() => navigate("/signup")} 
           >
             Sign Up
           </span>
@@ -147,4 +196,3 @@ const Login = () => {
 };
 
 export default Login;
-

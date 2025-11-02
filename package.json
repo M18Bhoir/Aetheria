@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start:backend": "node backend/server.js"
+    "start:backend": "node backend/server.js",
+    "seed": "node backend/seed.js"
   },
   "dependencies": {
     "@syncfusion/ej2-react-grids": "^30.2.6",
