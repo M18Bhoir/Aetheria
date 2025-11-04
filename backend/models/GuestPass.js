@@ -42,8 +42,9 @@ const GuestPassSchema = new mongoose.Schema({
 
 // Index for users to find their passes
 GuestPassSchema.index({ requestedBy: 1, status: 1 });
-// Index for finding a pass by its code (if it exists)
-GuestPassSchema.index({ code: 1 });
+
+// --- FIX: REMOVED DUPLICATE INDEX ---
+// GuestPassSchema.index({ code: 1 }); // This line was a duplicate of 'unique: true'
 
 const GuestPass = mongoose.model('GuestPass', GuestPassSchema);
 export default GuestPass;

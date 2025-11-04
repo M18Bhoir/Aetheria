@@ -72,44 +72,54 @@ function CreateMarketplaceItem() {
             return;
         }
 
-        // --- Simulated Upload ---
-        let uploadedImageUrl = ''; // This would be the URL from the backend in a real app
+        // --- 1. REAL IMAGE UPLOAD ---
+        let uploadedImageUrl = ''; // Start with an empty URL
+        
         if (imageFile) {
-            console.log('Image file selected:', imageFile.name, imageFile.size, imageFile.type);
-             // **REAL IMPLEMENTATION NOTE:**
-             // Here you would typically:
-             // 1. Create FormData: `const formData = new FormData(); formData.append('image', imageFile);`
-             // 2. Upload to backend: `const uploadRes = await api.post('/api/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });`
-             // 3. Get URL: `uploadedImageUrl = uploadRes.data.imageUrl;`
-             // For now, we'll just use the filename as a placeholder (or keep it empty)
-             // uploadedImageUrl = `placeholder/path/to/${imageFile.name}`; // Example placeholder
-             // We show an info message, but only clear it on actual success/failure below
-             setMessage({ type: 'info', text: 'Image selected, processing...' });
+            setMessage({ type: 'info', text: 'Uploading image...' });
+            const formData = new FormData();
+            formData.append('image', imageFile); // 'image' must match backend key
+
+            try {
+                // Upload the image first
+                const uploadRes = await api.post('/api/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+                // Get the URL from the backend response
+                uploadedImageUrl = uploadRes.data.imageUrl;
+                setMessage({ type: 'info', text: 'Image uploaded! Creating listing...' });
+            } catch (err) {
+                console.error("Image upload failed:", err);
+                setMessage({ type: 'error', text: err.response?.data?.msg || 'Image upload failed. Please try again.' });
+                setLoading(false);
+                return; // Stop if image upload fails
+            }
         }
-        // --- End Simulated Upload ---
+        // --- 2. END OF REAL UPLOAD ---
 
 
         try {
+            // --- 3. CREATE MARKETPLACE ITEM (now with real URL) ---
             await api.post('/api/marketplace', {
                 title,
                 description,
                 price: priceNum,
                 category,
                 condition,
-                // Send the URL obtained from upload (empty for now)
-                imageUrl: uploadedImageUrl,
+                imageUrl: uploadedImageUrl, // Send the URL from the upload
             });
-            // Clear any info message and set success
+            
             setMessage({ type: 'success', text: 'Item listed successfully!' });
             setTimeout(() => {
                 navigate('/dashboard/marketplace'); // Redirect to marketplace list
-            }, 1500); // Shortened delay back
+            }, 1500); 
 
         } catch (err) {
             console.error("Error listing item:", err);
              if (err.message !== "Unauthorized access - Redirecting to login.") {
-                 // Clear any info message and set error
-                 setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to list item.' });
+                 setMessage({ type: 'error', text: err.response?.data?.msg || err.response?.data?.message || 'Failed to list item.' });
              }
         } finally {
             setLoading(false);
@@ -126,9 +136,9 @@ function CreateMarketplaceItem() {
 
              {message.text && (
                  <div className={`mb-4 p-3 rounded-md text-sm ${
-                     message.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
-                     message.type === 'success' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
-                     'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' // Info
+                       message.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
+                       message.type === 'success' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
+                       'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' // Info
                  }`}>
                      {message.text}
                  </div>
@@ -161,7 +171,7 @@ function CreateMarketplaceItem() {
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                     <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}
                             className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                         {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
 
@@ -183,19 +193,19 @@ function CreateMarketplaceItem() {
                         accept="image/*" // Accept only image types
                         onChange={handleFileChange}
                         className="block w-full text-sm text-gray-500 dark:text-gray-400
-                                   file:mr-4 file:py-2 file:px-4
-                                   file:rounded-md file:border-0
-                                   file:text-sm file:font-semibold
-                                   file:bg-blue-50 dark:file:bg-gray-600
-                                   file:text-blue-700 dark:file:text-blue-300
-                                   hover:file:bg-blue-100 dark:hover:file:bg-gray-500
-                                   file:cursor-pointer"
+                                 file:mr-4 file:py-2 file:px-4
+                                 file:rounded-md file:border-0
+                                 file:text-sm file:font-semibold
+                                 file:bg-blue-50 dark:file:bg-gray-600
+                                 file:text-blue-700 dark:file:text-blue-300
+                                 hover:file:bg-blue-100 dark:hover:file:bg-gray-500
+                                 file:cursor-pointer"
                     />
                      {/* Image Preview */}
                      {imagePreview && (
-                        <div className="mt-4">
-                            <img src={imagePreview} alt="Selected preview" className="max-h-48 w-auto rounded-md border dark:border-gray-600" />
-                        </div>
+                         <div className="mt-4">
+                             <img src={imagePreview} alt="Selected preview" className="max-h-48 w-auto rounded-md border dark:border-gray-600" />
+                         </div>
                      )}
                 </div>
 
@@ -207,8 +217,8 @@ function CreateMarketplaceItem() {
                         }`}
                 >
                     {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>
-                     ) : (
+                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mx-auto"></div>
+                       ) : (
                          'List Item'
                     )}
                 </button>
@@ -218,4 +228,3 @@ function CreateMarketplaceItem() {
 }
 
 export default CreateMarketplaceItem;
-

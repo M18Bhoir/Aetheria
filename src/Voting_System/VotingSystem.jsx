@@ -1,10 +1,8 @@
-// src/Voting_System/VotingSystem.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-// --- CORRECTED: Use the consistent API instance ---
 import api from "../utils/api";
 
-// ---------------------- Poll List Component ----------------------
+// ---------------------- Poll List Component (User) ----------------------
 export function PollList() {
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,8 +14,8 @@ export function PollList() {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get(`/api/polls`); // Use /api prefix
-        setPolls(res.data); // Assuming backend sends array directly
+        const res = await api.get(`/api/polls`); 
+        setPolls(res.data); 
       } catch (err) {
         console.error("Failed to fetch polls:", err);
         if (err.message !== "Unauthorized access - Redirecting to login.") {
@@ -30,8 +28,6 @@ export function PollList() {
     fetchPolls();
   }, []);
 
-  const isLoggedIn = !!localStorage.getItem('token');
-
   if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading polls...</div>;
   if (error) return <div className="text-center p-6 text-red-500">{error}</div>;
 
@@ -39,14 +35,6 @@ export function PollList() {
     <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Available Polls</h2>
-        {isLoggedIn && (
-           <button
-             onClick={() => navigate("/dashboard/voting/create")} // Correct path relative to App.jsx routes
-             className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors duration-200"
-           >
-             Create New Poll
-           </button>
-        )}
       </div>
 
       {polls.length === 0 ? (
@@ -57,12 +45,12 @@ export function PollList() {
             <li key={p._id}
                 className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 flex justify-between items-center">
               <div>
-                   {/* Link path adjusted to match App.jsx */}
+                  {/* This link goes to the user's detail page */}
                   <Link to={`/dashboard/poll/${p._id}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium text-lg">
                   {p.question}
                   </Link>
                   <span className="block text-gray-500 dark:text-gray-400 text-sm mt-1">
-                      Created by {p.createdBy?.name || "Unknown User"} on {new Date(p.createdAt).toLocaleDateString()}
+                      Created by {p.createdBy?.name || "Admin"} on {new Date(p.createdAt).toLocaleDateString()}
                   </span>
               </div>
               <span className="text-sm text-gray-600 dark:text-gray-300">
@@ -76,7 +64,7 @@ export function PollList() {
   );
 }
 
-// ---------------------- Poll Detail Component ----------------------
+// ---------------------- Poll Detail Component (Shared) ----------------------
 export function PollDetail() {
   const { id } = useParams();
   const [poll, setPoll] = useState(null);
@@ -85,34 +73,41 @@ export function PollDetail() {
   const [error, setError] = useState(null);
   const [voteMessage, setVoteMessage] = useState(null);
   const navigate = useNavigate();
-
-  const fetchPoll = async () => {
-    setLoading(true);
-    setError(null);
-    setVoteMessage(null);
-    try {
-      const res = await api.get(`/api/polls/${id}`); // Use /api prefix
-      setPoll(res.data);
-      setSelectedOptionIndex(null);
-    } catch (err) {
-      console.error(`Failed to fetch poll ${id}:`, err);
-       if (err.message === "Unauthorized access - Redirecting to login.") { return; }
-
-       if (err.response && err.response.status === 404) {
-         setError("Poll not found.");
-       } else if (err.response && err.response.status === 400) {
-         setError("Invalid Poll ID format.");
-       } else {
-         setError(err.response?.data?.message || err.response?.data?.msg || "Could not load poll details.");
-       }
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // --- 1. CHECK IF THE VIEWER IS AN ADMIN ---
+  const isAdmin = !!localStorage.getItem('admin');
 
   useEffect(() => {
+    const fetchPoll = async () => {
+      setLoading(true);
+      setError(null);
+      setVoteMessage(null);
+      
+      // --- 2. CHOOSE THE CORRECT API ROUTE ---
+      const url = isAdmin ? `/api/polls/admin/${id}` : `/api/polls/${id}`;
+
+      try {
+        const res = await api.get(url); 
+        setPoll(res.data);
+        setSelectedOptionIndex(null);
+      } catch (err) {
+        console.error(`Failed to fetch poll ${id}:`, err);
+        if (err.message === "Unauthorized access - Redirecting to login.") { return; }
+        if (err.response && err.response.status === 401) { return; } // Let interceptor handle it
+
+        if (err.response && err.response.status === 404) {
+          setError("Poll not found.");
+        } else if (err.response && err.response.status === 400) {
+          setError("Invalid Poll ID format.");
+        } else {
+          setError(err.response?.data?.message || err.response?.data?.msg || "Could not load poll details.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchPoll();
-  }, [id]);
+  }, [id, isAdmin]); // Add isAdmin as a dependency
 
   const handleVote = async () => {
     if (selectedOptionIndex === null) {
@@ -122,19 +117,19 @@ export function PollDetail() {
     setVoteMessage(null);
 
     try {
-      // This part was already correct: POSTing with optionIndex
-      await api.post(`/api/polls/${id}/vote`, { optionIndex: selectedOptionIndex }); //
+      await api.post(`/api/polls/vote/${id}`, { optionIndex: selectedOptionIndex }); 
       setVoteMessage({ type: 'success', text: 'Your vote has been recorded!' });
-      await fetchPoll(); // Refresh poll data
+      // Refetch poll data (will use the correct admin/user route)
+      const url = isAdmin ? `/api/polls/admin/${id}` : `/api/polls/${id}`;
+      const res = await api.get(url);
+      setPoll(res.data);
     } catch (err) {
       console.error("Error submitting vote:", err);
       if (err.message === "Unauthorized access - Redirecting to login.") { return; }
-
       let errMsg = "Error submitting vote.";
        if (err.response) {
             errMsg = err.response.data?.message || err.response.data?.msg || "An error occurred on the server.";
             if (err.response.status === 401) errMsg = "Authentication error. You may need to log in again.";
-             // Handle specific errors like "already voted" if backend sends them
             if (err.response.data?.msg?.includes('already voted')) {
                  errMsg = "You have already voted in this poll.";
             }
@@ -144,6 +139,9 @@ export function PollDetail() {
       setVoteMessage({ type: 'error', text: errMsg });
     }
   };
+  
+  // --- 3. SET THE CORRECT "BACK" PATH ---
+  const backPath = isAdmin ? '/admin/manage-polls' : '/dashboard/voting';
 
   if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading poll details...</div>;
   if (error) return <div className="text-center p-6 text-red-500">{error}</div>;
@@ -153,34 +151,35 @@ export function PollDetail() {
 
   return (
     <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl mx-auto">
-       {/* Button path adjusted */}
-      <button onClick={() => navigate('/dashboard/voting')} className="mb-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">
+      <button onClick={() => navigate(backPath)} className="mb-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">
           &larr; Back to Poll List
       </button>
       <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-900 dark:text-white">{poll.question}</h2>
        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-           Created by {poll.createdBy?.name || "Unknown User"} on {new Date(poll.createdAt).toLocaleDateString()}
+           Created by {poll.createdBy?.name || "Admin"} on {new Date(poll.createdAt).toLocaleDateString()}
        </p>
 
-        {/* Voting Section */}
-        <fieldset className="mb-6">
-            <legend className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Cast Your Vote:</legend>
-            <div className="space-y-3">
-            {poll.options.map((option, index) => (
-                <label key={index} className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 dark:has-[:checked]:ring-blue-400">
-                <input
-                    type="radio"
-                    name="pollOption"
-                    value={index}
-                    checked={selectedOptionIndex === index}
-                    onChange={() => setSelectedOptionIndex(index)}
-                    className="form-radio h-5 w-5 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-600"
-                />
-                <span className="text-gray-800 dark:text-gray-200">{option.text}</span>
-                </label>
-            ))}
-            </div>
-        </fieldset>
+        {/* Voting Section (Hidden for Admin) */}
+        {!isAdmin && (
+            <fieldset className="mb-6">
+                <legend className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Cast Your Vote:</legend>
+                <div className="space-y-3">
+                {poll.options.map((option, index) => (
+                    <label key={index} className="flex items-center space-x-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 has-[:checked]:ring-2 has-[:checked]:ring-blue-500 dark:has-[:checked]:ring-blue-400">
+                    <input
+                        type="radio"
+                        name="pollOption"
+                        value={index}
+                        checked={selectedOptionIndex === index}
+                        onChange={() => setSelectedOptionIndex(index)}
+                        className="form-radio h-5 w-5 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-500 focus:ring-blue-500 dark:focus:ring-blue-400 dark:bg-gray-600"
+                    />
+                    <span className="text-gray-800 dark:text-gray-200">{option.text}</span>
+                    </label>
+                ))}
+                </div>
+            </fieldset>
+        )}
 
         {voteMessage && (
             <div className={`my-4 p-3 rounded-md text-sm ${voteMessage.type === 'error' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'}`}>
@@ -188,12 +187,15 @@ export function PollDetail() {
             </div>
         )}
 
-        <button
-            onClick={handleVote}
-            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-        >
-            Submit Vote
-        </button>
+        {/* Submit Button (Hidden for Admin) */}
+        {!isAdmin && (
+            <button
+                onClick={handleVote}
+                className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-7Git 00 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            >
+                Submit Vote
+            </button>
+        )}
 
       {/* Results Section */}
       <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">

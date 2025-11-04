@@ -5,32 +5,26 @@ import Admin from '../models/Admin.js';
 import User from '../models/User.js';   
 import Dues from '../models/Dues.js';   
 import adminAuth from '../middleware/adminAuth.js'; 
-// --- 1. IMPORT THE NEW GUESTPASS MODEL ---
-import GuestPass from '../models/GuestPass.js';
+import axios from 'axios'; // <-- Make sure axios is imported
 
 const router = express.Router();
 
-// @route   POST api/admin/login
-// ... (existing login route code) ...
+// ... (existing /login route is unchanged) ...
 router.post('/login', async (req, res) => {
     
-    // --- USING DYNAMIC CREDENTIALS ---
     const { adminId, password } = req.body; 
 
-    // Basic validation
     if (!adminId || !password) {
         return res.status(400).json({ msg: 'Please provide Admin ID and password' });
     }
 
     try {
-        // Check for admin user
         const admin = await Admin.findOne({ adminId: adminId });
         if (!admin) {
             console.log(`Admin login attempt failed: Admin ID ${adminId} not found.`);
             return res.status(400).json({ msg: 'Invalid credentials (admin not found)' });
         }
 
-        // Check password
         const isMatch = await admin.matchPassword(password);
         if (!isMatch) {
             console.log(`Admin login attempt failed: Incorrect password for Admin ID ${adminId}.`);
@@ -66,8 +60,7 @@ router.post('/login', async (req, res) => {
 });
 
 
-// @route   POST api/admin/dues
-// ... (existing dues route code) ...
+// ... (existing /dues route is unchanged) ...
 router.post('/dues', adminAuth, async (req, res) => {
   const { userId, amount, dueDate, type, notes } = req.body;
 
@@ -101,12 +94,9 @@ router.post('/dues', adminAuth, async (req, res) => {
   }
 });
 
-
-// @route   GET api/admin/residents
-// ... (existing residents route code) ...
+// ... (existing /residents route is unchanged) ...
 router.get('/residents', adminAuth, async (req, res) => {
   try {
-    // Find all users and exclude their password
     const residents = await User.find().select('-password').sort({ createdAt: -1 });
     res.json(residents);
   } catch (err) {
@@ -115,91 +105,96 @@ router.get('/residents', adminAuth, async (req, res) => {
   }
 });
 
-// -----------------------------------------------------------------
-// --- 2. ADD NEW GUEST PASS ROUTES ---
-// -----------------------------------------------------------------
-
-// @route   POST api/admin/guestpass
-// @desc    Admin creates a new guest pass
-// @access  Private (Admin Only)
-router.post('/guestpass', adminAuth, async (req, res) => {
-  const { residentUserId, guestName, visitDate, reason } = req.body;
-  
-  if (!residentUserId || !guestName || !visitDate) {
-    return res.status(400).json({ msg: 'Resident User ID, Guest Name, and Visit Date are required.' });
-  }
-
-  try {
-    // Find the resident by their User ID (e.g., "A-101")
-    const resident = await User.findOne({ userId: residentUserId });
-    if (!resident) {
-      return res.status(404).json({ msg: `Resident with User ID '${residentUserId}' not found.` });
+// ... (existing /maintenance-forecast route is unchanged) ...
+router.post('/maintenance-forecast', adminAuth, async (req, res) => {
+    try {
+        const inputFeatures = req.body;
+        const mlApiResponse = await axios.post(
+            'http://127.0.0.1:5000/predict', 
+            inputFeatures
+        );
+        res.json(mlApiResponse.data);
+    } catch (err) {
+        console.error('Error calling ML API:', err.message);
+        if (err.response && err.response.data) {
+            return res.status(err.response.status).json(err.response.data);
+        }
+        res.status(500).json({ msg: 'Server error while getting forecast.' });
     }
-
-    // Generate a simple unique code
-    const code = `GP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-    const newPass = new GuestPass({
-      resident: resident._id,
-      guestName,
-      visitDate: new Date(visitDate),
-      reason,
-      code,
-      status: 'Active',
-      createdBy: req.admin.id // From adminAuth middleware
-    });
-
-    await newPass.save();
-    
-    // Populate resident info before sending back
-    const pass = await GuestPass.findById(newPass._id).populate('resident', 'name userId');
-    res.status(201).json(pass);
-
-  } catch (err) {
-    console.error('Error creating guest pass:', err.message);
-    if (err.code === 11000) { // Handle duplicate code error
-        return res.status(400).json({ msg: 'Code generation conflict. Please try again.' });
-    }
-    res.status(500).json({ msg: 'Server error' });
-  }
 });
 
-// @route   GET api/admin/guestpass
-// @desc    Admin gets all guest passes (e.g., active and recent)
+
+// --- 1. NEW ROUTE: Get all dues for all users ---
+// @route   GET /api/admin/all-dues
+// @desc    Admin gets a list of all dues
 // @access  Private (Admin Only)
-router.get('/guestpass', adminAuth, async (req, res) => {
+router.get('/all-dues', adminAuth, async (req, res) => {
     try {
-        // Find all passes, populate resident info, sort by most recent visit date
-        const passes = await GuestPass.find()
-            .populate('resident', 'name userId')
-            .sort({ visitDate: -1 }); // Show upcoming/recent first
-        res.json(passes);
+        const dues = await Dues.find({})
+            .populate('user', 'name userId') // Get user info
+            .sort({ dueDate: -1 }); // Show most recent first
+        res.json(dues);
     } catch (err) {
-        console.error('Error fetching guest passes:', err.message);
+        console.error('Error fetching all dues:', err.message);
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
-// @route   PATCH api/admin/guestpass/:id/revoke
-// @desc    Admin revokes (cancels) an active guest pass
+// --- 2. NEW ROUTE: Update a due's status ---
+// @route   PATCH /api/admin/dues/:id/status
+// @desc    Admin manually updates a due's status (e.g., to 'Paid')
 // @access  Private (Admin Only)
-router.patch('/guestpass/:id/revoke', adminAuth, async (req, res) => {
+router.patch('/dues/:id/status', adminAuth, async (req, res) => {
+    const { status } = req.body;
+
+    // Validate the incoming status
+    if (!status || !['Pending', 'Paid', 'Overdue'].includes(status)) {
+        return res.status(400).json({ msg: 'Invalid status provided.' });
+    }
+
     try {
-        const pass = await GuestPass.findById(req.params.id);
-        if (!pass) {
-            return res.status(404).json({ msg: 'Guest pass not found' });
+        const due = await Dues.findById(req.params.id);
+        if (!due) {
+            return res.status(404).json({ msg: 'Due not found' });
         }
 
-        pass.status = 'Revoked';
-        await pass.save();
-        
-        const updatedPass = await GuestPass.findById(pass._id).populate('resident', 'name userId');
-        res.json(updatedPass);
+        due.status = status;
+        await due.save();
+
+        // Send back the updated due, populated with user info
+        const updatedDue = await Dues.findById(due._id).populate('user', 'name userId');
+        res.json(updatedDue);
+
     } catch (err) {
-        console.error('Error revoking guest pass:', err.message);
+        console.error('Error updating due status:', err.message);
         res.status(500).json({ msg: 'Server error' });
     }
 });
+// --- NEW ROUTE: Admin Dashboard Stats ---
+// @route   GET /api/admin/dashboard-stats
+// @desc    Get summary statistics for admin dashboard
+// @access  Private (Admin Only)
+router.get('/dashboard-stats', adminAuth, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalDues = await Dues.countDocuments();
+    const paidDues = await Dues.countDocuments({ status: 'Paid' });
+    const pendingDues = await Dues.countDocuments({ status: 'Pending' });
+    const overdueDues = await Dues.countDocuments({ status: 'Overdue' });
+
+    res.json({
+      totalUsers,
+      totalDues,
+      paidDues,
+      pendingDues,
+      overdueDues,
+    });
+  } catch (err) {
+    console.error('Error fetching dashboard stats:', err.message);
+    res.status(500).json({ msg: 'Server error while fetching dashboard stats' });
+  }
+});
+
 
 
 export default router;

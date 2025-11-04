@@ -33,9 +33,9 @@ const MarketplaceItemSchema = new mongoose.Schema({
   imageUrl: {
     type: String,
     trim: true,
-    // Basic validation for URL format (optional but recommended)
-    match: [/^https?:\/\/.+/i, 'Please use a valid URL starting with http:// or https://']
-    // NOTE: This only stores a URL. Image upload requires more setup.
+    // --- FIX: REMOVED THE 'match' VALIDATION ---
+    // This field is now truly optional and can be an empty string.
+    // match: [/^https?:\/\/.+/i, 'Please use a valid URL starting with http:// or https://']
   },
   seller: {
     type: mongoose.Schema.Types.ObjectId,

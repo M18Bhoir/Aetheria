@@ -1,121 +1,98 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom'; // Use NavLink for active styling
-// Import icons
-import {
-  HiChartPie,
-  HiTicket,
-  HiUserCircle,
-  HiChevronLeft,
-  HiCalendar,
-  HiLogout,
-  HiOutlineShoppingCart,
-  HiOutlineCollection,
-  // --- 1. IMPORT NEW ICON ---
-  HiOutlineIdentification 
-} from "react-icons/hi"; 
+// 1. Use NavLink from react-router-dom
+import { NavLink, useNavigate } from 'react-router-dom';
 
-// Helper component for NavLink items
-const NavItem = ({ to, icon, text, isOpen }) => (
+// 2. Import the lucide-react icons
+import {
+  Home,
+  Vote,
+  Calendar,
+  CalendarCheck,
+  Key, // For Guest Pass
+  ShoppingCart,
+  List,
+  User,
+  Menu,
+  X,
+  LogOut // <-- THIS WAS THE MISSING IMPORT
+} from 'lucide-react'; 
+
+// 3. NavItem component (identical logic to admin's)
+const NavItem = ({ item, isOpen }) => (
   <li>
     <NavLink
-      to={to}
-      // Add active styling using NavLink's isActive prop
+      to={item.path}
+      // 'end' prop is for the 'Home' link
+      end={item.path === '/dashboard'}
       className={({ isActive }) =>
-        `flex items-center py-3 px-5 transition-colors duration-200 rounded-md mx-2 my-1 ${ // Added rounding, margin
-          isActive
-            ? 'bg-blue-600 text-white shadow-inner' // Active state style
-            : 'hover:bg-gray-700 hover:text-white'   // Hover state style
+        `flex items-center space-x-3 w-full p-3 rounded-lg transition-colors duration-200
+        ${isOpen ? "px-4" : "justify-center"}
+        ${isActive
+          ? "bg-blue-600 text-white shadow-md"
+          : "text-gray-300 hover:bg-gray-700 hover:text-white"
         }`
       }
-      // Use 'end' prop for exact matching on parent routes like /dashboard
-      end={to === '/dashboard'}
     >
-      {/* Ensure icon is a valid React element before cloning */}
-      {React.isValidElement(icon) ? React.cloneElement(icon, { size: "1.5rem" }) : null}
-      {/* Conditionally render the text with smooth transition */}
-       <span className={`ml-4 overflow-hidden transition-all duration-300 ${isOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0'}`}>
-         {text}
-       </span>
+      {item.icon}
+      {isOpen && <span className="font-medium">{item.name}</span>}
     </NavLink>
   </li>
 );
 
-
+// 4. Main Sidebar component
 function Sidebar({ isOpen, setIsOpen }) {
-    const navigate = useNavigate();
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('admin');
-        navigate('/login'); // Redirect to login page
-        // Optionally: You might want to also clear any global state (Redux, Context) here
-    };
+  
+  // 5. Define the USER menu with the new lucide-react icons
+  const menu = [
+    { name: "Home", icon: <Home size={20} />, path: "/dashboard" },
+    { name: "Voting", icon: <Vote size={20} />, path: "/dashboard/voting" },
+    { name: "Book Amenity", icon: <Calendar size={20} />, path: "/dashboard/booking" },
+    { name: "My Bookings", icon: <CalendarCheck size={20} />, path: "/dashboard/my-bookings" },
+    { name: "Request Guest Pass", icon: <Key size={20} />, path: "/dashboard/request-guest-pass" },
+    { name: "My Guest Passes", icon: <Key size={20} />, path: "/dashboard/my-guest-passes" },
+    { name: "Marketplace", icon: <ShoppingCart size={20} />, path: "/dashboard/marketplace" },
+    { name: "My Listings", icon: <List size={20} />, path: "/dashboard/my-listings" },
+    { name: "Profile", icon: <User size={20} />, path: "/dashboard/profile" },
+  ];
 
   return (
     <nav
       className={`h-screen bg-gray-900 text-gray-200 shadow-lg
-                  flex flex-col // Make sidebar a flex column
+                  flex flex-col 
                   ${isOpen ? 'w-64' : 'w-20'}
                   transition-all duration-300 relative`}
     >
-
-      {/* Logo/Title Section */}
-      <div className="p-5 flex items-center justify-between"> {/* Adjusted for toggle button */}
-        <div className="flex items-center overflow-hidden">
-             {/* Replace text with an icon or logo if you have one */}
-             {/* <img src="/path/to/your/logo.svg" alt="Logo" className="h-8 mr-2" /> */}
-             <span className={`text-2xl font-bold text-white whitespace-nowrap transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-               Aetheria
-             </span>
-        </div>
-         {/* Toggle Button - Moved near top for better UX */}
+      {/* 6. Header section with new toggle button (like admin) */}
+      <div className="flex items-center justify-between p-4 h-16 border-b border-gray-700">
+        {isOpen && <div className="text-xl font-bold text-white">Aetheria</div>}
         <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-all"
+            className="p-2 rounded-lg text-gray-400 hover:bg-gray-700 hover:text-white"
         >
-            <HiChevronLeft
-            size="1.5rem"
-            className={`transition-transform duration-300 ${!isOpen && 'rotate-180'}`}
-            />
+            {/* Use the Menu/X toggle */}
+            {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-       {/* Subtitle (only shown when open) */}
-       {isOpen && (
-            <p className="text-sm text-gray-400 px-5 mb-5 -mt-2">Society Management</p>
-       )}
+      {/* 7. Navigation Links */}
+      <nav className="flex-1 space-y-2 p-3 overflow-y-auto">
+        {menu.map((item) => (
+          <NavItem key={item.name} item={item} isOpen={isOpen} />
+        ))}
+      </nav>
 
+      {/* 8. NO LOGOUT BUTTON
+          This is correct, as your logout button is in the UserLayout's top bar.
+          We add an invisible spacer at the bottom to match the admin's layout,
+          which pushes the menu items up.
+      */}
+      <div className="p-3 border-t border-transparent" style={{ opacity: 0 }}>
+         <div className="flex items-center space-x-3 w-full p-3">
+            <LogOut size={20} />
+            {isOpen && <span className="font-medium">Logout</span>}
+         </div>
+      </div>
 
-      {/* Navigation Links List */}
-      <ul className="flex-grow mt-4"> {/* Use flex-grow to push logout down */}
-        <NavItem to="/dashboard" icon={<HiChartPie />} text="Home" isOpen={isOpen} />
-        <NavItem to="/dashboard/voting" icon={<HiTicket />} text="Voting" isOpen={isOpen} />
-        {/* --- Booking Links --- */}
-        <NavItem to="/dashboard/booking" icon={<HiCalendar />} text="Book Amenity" isOpen={isOpen} />
-        <NavItem to="/dashboard/my-bookings" icon={<HiCalendar />} text="My Bookings" isOpen={isOpen} />
-        {/* --- 2. ADD GUEST PASS LINKS --- */}
-        <NavItem to="/dashboard/request-guest-pass" icon={<HiOutlineIdentification />} text="Request Guest Pass" isOpen={isOpen} />
-        <NavItem to="/dashboard/my-guest-passes" icon={<HiOutlineIdentification />} text="My Guest Passes" isOpen={isOpen} />
-        {/* --- Marketplace Links --- */}
-        <NavItem to="/dashboard/marketplace" icon={<HiOutlineShoppingCart />} text="Marketplace" isOpen={isOpen} />
-        <NavItem to="/dashboard/my-listings" icon={<HiOutlineCollection />} text="My Listings" isOpen={isOpen} />
-        {/* --- End Marketplace Links --- */}
-        <NavItem to="/dashboard/profile" icon={<HiUserCircle />} text="Profile" isOpen={isOpen} />
-      </ul>
-
-      {/* Logout Button at the bottom */}
-       <div className="mt-auto p-2"> {/* Container to push to bottom */}
-         <button
-           onClick={handleLogout}
-           className="flex items-center w-full py-3 px-5 text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors duration-200 rounded-md mx-2 my-1"
-         >
-           <HiLogout size="1.5rem" />
-           <span className={`ml-4 overflow-hidden transition-all duration-300 ${isOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0'}`}>
-             Logout
-           </span>
-         </button>
-       </div>
     </nav>
   );
 }

@@ -16,6 +16,11 @@ export default defineConfig({
         // Optional: rewrite path if backend expects routes without /api
         // rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      }
     },
   },
   build: {

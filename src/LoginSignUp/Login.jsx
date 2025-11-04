@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// --- UPDATED: Use relative path ---
+// Use relative path
 import api from "../utils/api.jsx"; 
 
-// --- UPDATED: Use relative paths ---
+// Use relative paths
 import user_icon from "../Assets/person.png"; 
 import password_icon from "../Assets/password.png"; 
 
 const Login = () => {
-  // State for user ID, password, messages, and loading status
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState(null); // For success/error messages
-  const [loading, setLoading] = useState(false); // For loading indicator
+  const [message, setMessage] = useState(null); 
+  const [loading, setLoading] = useState(false); 
 
-  const [loginType, setLoginType] = useState("user"); // 'user' or 'admin'
+  const [loginType, setLoginType] = useState("user"); 
 
   const navigate = useNavigate();
 
@@ -31,14 +30,11 @@ const Login = () => {
       let storageKey = "";
 
       if (loginType === "admin") {
-        // --- Admin Login Logic ---
-        loginEndpoint = "/api/admin/login";
-        // --- Use state variables (Fixed) ---
+        loginEndpoint = "/api/admin/login"; 
         payload = { adminId: userId, password: password }; 
-        successRedirect = "/admin-dashboard";
+        successRedirect = "/admin"; // Corrected redirect path
         storageKey = "admin";
       } else {
-        // --- User Login Logic ---
         loginEndpoint = "/api/auth/login";
         payload = { userId, password };
         successRedirect = "/dashboard";
@@ -49,17 +45,25 @@ const Login = () => {
       res = await api.post(loginEndpoint, payload);
 
       if (res.status === 200 && res.data.token) {
-        // Store token (same for both)
         localStorage.setItem("token", res.data.token);
         
-        // Store user or admin data
         const dataToStore = (loginType === 'admin') ? res.data.admin : res.data.user;
         localStorage.setItem(storageKey, JSON.stringify(dataToStore)); 
 
+        // Clear the other role's key
+        if (loginType === "admin") {
+            localStorage.removeItem("user");
+        } else {
+            localStorage.removeItem("admin");
+        }
+
         setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
         
-        // Redirect to the correct dashboard
-        setTimeout(() => navigate(successRedirect), 1000);
+        // --- THIS IS THE FIX ---
+        // Removed the 1000ms delay to make the redirect immediate.
+        navigate(successRedirect);
+        // --- END OF FIX ---
+        
       } else {
         setMessage({ type: 'error', text: res.data.message || res.data.msg || "Login failed. Please try again." });
       }
@@ -67,12 +71,11 @@ const Login = () => {
       console.error("Login error:", err);
       let errorMessage = "Error during login. Please try again.";
       if (err.response) {
-        errorMessage = err.response.data.message || err.response.data.msg || "Invalid credentials or server error.";
+        errorMessage = err.response?.data?.message || err.response?.data?.msg || "Invalid credentials or server error.";
       } else if (err.request) {
         errorMessage = "Network error. Could not connect to the server.";
       }
       
-      // Clear all auth keys on failure
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('admin');
@@ -110,7 +113,7 @@ const Login = () => {
             </div>
           )}
 
-          {/* --- 2. ADD LOGIN TYPE TOGGLE --- */}
+          {/* --- LOGIN TYPE TOGGLE --- */}
           <div className="flex justify-center gap-2">
             <button
               type="button" 
@@ -143,10 +146,9 @@ const Login = () => {
             <img src={user_icon} alt="User ID icon" className="mx-4 h-5 w-5 invert" />
             <input
               type="text"
-              // Dynamic placeholder based on loginType
               placeholder={loginType === 'user' ? 'User ID' : 'Admin ID'} 
               value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              onChange={(e) => setUserId(e.target.value)} 
               required
               className="h-[50px] w-full bg-transparent text-white text-lg placeholder:text-gray-400 outline-none"
             />

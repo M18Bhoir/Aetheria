@@ -1,143 +1,175 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { HiOutlineArrowLeft, HiOutlinePencil, HiOutlineTrash } from "react-icons/hi"; // Icons
+// --- 1. IMPORT ICONS ---
+import { ArrowLeft, Edit, Trash2, User, Mail, Home } from 'lucide-react';
 
-// Placeholder image function
-const placeholderImage = (text = 'No Image') => `https://placehold.co/600x400/EEE/31343C?text=${encodeURIComponent(text)}`;
+// Reusable component for item details
+const DetailRow = ({ label, value }) => (
+    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
+        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</dt>
+        <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:mt-0 sm:col-span-2">{value}</dd>
+    </div>
+);
 
 function MarketplaceItemDetail() {
-    const { itemId } = useParams();
-    const navigate = useNavigate();
-    const [item, setItem] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [currentUser, setCurrentUser] = useState(null); // To check ownership
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        // Get current user info from local storage (simplified)
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            try {
-                setCurrentUser(JSON.parse(storedUser));
-            } catch (e) { console.error("Error parsing user from storage"); }
-        }
+  // Get the logged-in user's ID from local storage
+  const [currentUserId, setCurrentUserId] = useState(null);
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      setCurrentUserId(JSON.parse(user).id); // 'id' from login response
+    }
+  }, []);
+  
+  const isSeller = item && currentUserId === item.seller?._id;
 
-        const fetchItem = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const res = await api.get(`/api/marketplace/${itemId}`);
-                setItem(res.data);
-            } catch (err) {
-                console.error(`Failed to fetch item ${itemId}:`, err);
-                if (err.message !== "Unauthorized access - Redirecting to login.") {
-                     setError(err.response?.data?.message || 'Could not load item details.');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchItem();
-    }, [itemId]);
-
-    const isOwner = currentUser && item && item.seller?._id === currentUser.id; // Check if current user owns the item
-
-     const handleDelete = async () => {
-        if (!isOwner) return;
-        if (window.confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
-            try {
-                await api.delete(`/api/marketplace/${item._id}`);
-                alert('Listing deleted successfully.');
-                navigate('/dashboard/my-listings'); // Go to user's listings page
-            } catch (err) {
-                 console.error("Failed to delete item:", err);
-                 alert(err.response?.data?.message || 'Failed to delete listing.');
-            }
-        }
+  useEffect(() => {
+    const fetchItem = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.get(`/api/marketplace/${itemId}`);
+        setItem(res.data);
+      } catch (err) {
+        console.error("Failed to fetch item:", err);
+        setError(err.response?.data?.message || err.response?.data?.msg || "Could not load item details.");
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchItem();
+  }, [itemId]);
 
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this listing?")) {
+        try {
+            await api.delete(`/api/marketplace/${itemId}`);
+            alert("Listing deleted.");
+            navigate('/dashboard/marketplace');
+        } catch (err) {
+             console.error("Failed to delete item:", err);
+             alert(err.response?.data?.message || "Could not delete listing.");
+        }
+    }
+  };
 
-    if (loading) return <p className="text-center p-6 text-gray-500 dark:text-gray-400">Loading item details...</p>;
-    if (error) return <p className="text-center p-6 text-red-500 dark:text-red-400">Error: {error}</p>;
-    if (!item) return <p className="text-center p-6 text-gray-500 dark:text-gray-400">Item not found.</p>;
+  if (loading) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Loading item...</div>;
+  if (error) return <div className="text-center p-6 text-red-500">{error}</div>;
+  if (!item) return <div className="text-center p-6 text-gray-500 dark:text-gray-400">Item not found.</div>;
 
-    return (
-        <div className="p-4 md:p-6 max-w-4xl mx-auto dark:text-gray-100">
-            <Link to="/dashboard/marketplace" className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline mb-4">
-                <HiOutlineArrowLeft className="h-4 w-4 mr-1" />
-                Back to Marketplace
-            </Link>
+  return (
+    <div className="max-w-4xl mx-auto p-4 md:p-6">
+      <button 
+        onClick={() => navigate(-1)} 
+        className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline mb-4">
+        <ArrowLeft size={16} className="mr-1" />
+        Back to Marketplace
+      </button>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden md:flex">
-                 {/* Image Section */}
-                 <div className="md:w-1/2">
-                    <img
-                        src={item.imageUrl || placeholderImage(item.title)}
-                        alt={item.title}
-                        onError={(e) => { e.target.onerror = null; e.target.src = placeholderImage(item.title); }}
-                        className="w-full h-64 md:h-full object-cover"
-                    />
-                 </div>
+        {/* --- Main Content (Image & Details) --- */}
+        <div className="lg:col-span-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                {/* Image */}
+                <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                    ) : (
+                        <span className="text-gray-500 dark:text-gray-400">No Image Provided</span>
+                    )}
+                </div>
 
-                 {/* Details Section */}
-                 <div className="md:w-1/2 p-6 flex flex-col justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{item.title}</h1>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-                            Listed on: {new Date(item.createdAt).toLocaleDateString()}
-                        </p>
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">
-                            ₹{item.price.toLocaleString('en-IN')}
-                        </p>
-
-                        <div className="space-y-2 text-sm mb-4">
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Category:</span> {item.category}</p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Condition:</span> {item.condition}</p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Status:</span>
-                                <span className={`ml-1 font-medium ${item.status === 'Available' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                                    {item.status}
-                                </span>
-                             </p>
-                             <p><span className="font-semibold text-gray-600 dark:text-gray-400">Seller:</span> {item.seller?.name || 'Unknown'} ({item.seller?.userId || 'N/A'})</p>
-                        </div>
-
-                        <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-1">Description</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-wrap mb-6">{item.description}</p>
+                {/* Item Details */}
+                <div className="p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{item.title}</h1>
+                    <p className="text-2xl font-semibold text-blue-600 dark:text-blue-400 mb-4">
+                        ₹{item.price.toLocaleString('en-IN')}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300 mb-4">
+                        {item.description}
+                    </p>
+                    
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <dl>
+                            <DetailRow label="Category" value={item.category} />
+                            <DetailRow label="Condition" value={item.condition} />
+                            <DetailRow label="Posted" value={new Date(item.createdAt).toLocaleDateString()} />
+                        </dl>
                     </div>
-
-                    {/* Action Buttons */}
-                     <div className="mt-auto border-t pt-4 dark:border-gray-700">
-                        {isOwner ? (
-                             <div className="flex space-x-2">
-                                <button
-                                    // onClick={() => navigate(`/dashboard/marketplace/edit/${item._id}`)} // TODO: Add edit route/component
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600"
-                                    disabled // Temporarily disable edit
-                                >
-                                    <HiOutlinePencil className="h-4 w-4 mr-1"/> Edit (Coming Soon)
-                                </button>
-                                <button
-                                    onClick={handleDelete}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                                >
-                                     <HiOutlineTrash className="h-4 w-4 mr-1"/> Delete
-                                </button>
-                             </div>
-                        ) : (
-                             <button
-                                // onClick={() => handleContactSeller()} // TODO: Implement contact logic (e.g., show email/phone or internal message)
-                                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                            >
-                                Contact Seller (Feature Coming Soon)
-                            </button>
-                        )}
-                    </div>
-                 </div>
+                </div>
             </div>
         </div>
-    );
+
+        {/* --- Sidebar (Seller Info & Actions) --- */}
+        <div className="lg:col-span-1 space-y-6">
+
+            {/* --- 2. NEW SELLER INFORMATION CARD --- */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-5">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Seller Information
+                </h2>
+                {item.seller ? (
+                     <ul className="space-y-3">
+                        <li className="flex items-center">
+                            <User size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
+                            <span className="text-gray-800 dark:text-gray-200">{item.seller.name}</span>
+                        </li>
+                        <li className="flex items-center">
+                            <Home size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
+                            <span className="text-gray-800 dark:text-gray-200">Flat: {item.seller.userId}</span>
+                        </li>
+                        <li className="flex items-center">
+                            <Mail size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
+                            <a href={`mailto:${item.seller.email}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                                {item.seller.email}
+                            </a>
+                        </li>
+                    </ul>
+                ) : (
+                    <p className="text-gray-500 dark:text-gray-400">Seller information is not available.</p>
+                )}
+            </div>
+            
+            {/* --- 3. ACTIONS CARD (for Seller only) --- */}
+            {isSeller && (
+                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-5">
+                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                        Your Listing
+                    </h2>
+                     <div className="space-y-3">
+                         {/* Edit Button */}
+                         <button 
+                             disabled={true} // Edit functionality is not implemented
+                             className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                             title="Edit (Coming Soon)">
+                             <Edit size={16} className="mr-2" />
+                             Edit Listing (Coming Soon)
+                         </button>
+
+                         {/* Delete Button */}
+                         <button
+                            onClick={handleDelete}
+                            className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 focus:ring-red-500"
+                        >
+                            <Trash2 size={16} className="mr-2" />
+                            Delete Listing
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default MarketplaceItemDetail;
